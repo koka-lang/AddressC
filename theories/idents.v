@@ -1,4 +1,5 @@
-(* Taken from https://github.com/mit-plv/coqutil/blob/master/src/coqutil/Tactics/ident_of_string.v *)
+(* Copyright (c) 2018-2019 the coqutil authors. *)
+(* Adapted from https://github.com/mit-plv/coqutil/blob/master/src/coqutil/Tactics/ident_of_string.v *)
 (* See https://coq.discourse.group/t/convert-ident-to-string-in-ltac/1159 *)
 
 Require Coq.Strings.String.
@@ -22,7 +23,6 @@ Ltac2 constr_string_of_string (s : string) :=
     if Int.equal i l then 'String.EmptyString else
     make (App scons (Array.of_list [Array.get asciis (Char.to_int (String.get s i)); f (Int.add i 1)])) in
   f 0.
-(* Ltac2 Eval constr_string_of_string "hello world". *)
 
 Ltac2 constr_string_of_ident (i : ident) := constr_string_of_string (Ident.to_string i).
 Ltac2 constr_string_of_var (c : constr) :=
@@ -55,35 +55,9 @@ Import Coq.Strings.String.
 Local Open Scope string_scope.
 Local Set Default Proof Mode "Classic".
 Local Tactic Notation "pose_string" ident(x) := let s := constr_string_of_ident x in pose s.
-Goal forall my_var: nat, my_var = my_var.
-  pose_string mystring.
-  intros.
-  match goal with
-  | |- _ = ?x => constr_string_of_var_cps x ltac:(fun s => pose s)
-  end.
-  let f := constr:(fun my_binder : unit => tt) in
-  constr_string_of_lambda_cps f ltac:(fun s => pose s).
-  let f := constr:(fun my_binder : unit => tt) in
-  let s := constr_string_of_lambda f in
-  pose s.
-  let s := constr_string_of_var my_var in
-  pose s.
-  Time do 1000 (constr_string_of_var_cps my_var ltac:(fun s => pose s as X; clear X)). (* 0.25s *)
-Abort.
 
 Notation "ident_to_string! x" := (
   match (fun x : Set => x) return String.string with x => ltac:(
     let lam := lazymatch goal with _ := ?lam |- _ => lam end in
     constr_string_of_lambda_cps lam ltac:(fun s => exact s))
   end) (at level 10, only parsing).
-
-Require Import Coq.Strings.String. Local Open Scope string_scope.
-Local Notation "foo! x" := (ident_to_string! x) (x ident, only parsing, at level 10).
-Goal True.
-  pose (ident_to_string! my_notation). lazymatch goal with x := "my_notation" |- _ => idtac end.
-  pose (foo! another). lazymatch goal with x := "another" |- _ => idtac end.
-  pose I as used.
-  pose (ident_to_string! used). lazymatch goal with x := "used" |- _ => idtac end.
-  pose I as another_used.
-  pose (foo! another_used). lazymatch goal with x := "another_used" |- _ => idtac end.
-Abort.

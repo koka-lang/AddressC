@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen, Wouter Swierstra *)
+
 From fip_iris Require Import lang tree.
 
 (* Recursive *)

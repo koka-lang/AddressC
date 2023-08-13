@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+
 From fip_iris Require Import lang tree tree_bu splay.
 
 Definition rotate_right : val :=

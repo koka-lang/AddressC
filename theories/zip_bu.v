@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+
 From fip_iris Require Import lang zip.
 
 Fixpoint is_tree `{!heapGS Σ}  (t : tree) (v : val) : iProp Σ :=

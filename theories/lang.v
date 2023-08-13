@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+
 From fip_iris Require Import idents.
 
 From iris.heap_lang Require Export proofmode class_instances.

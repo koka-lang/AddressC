@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+
 From Equations Require Import Equations.
 From fip_iris Require Import lang.
 

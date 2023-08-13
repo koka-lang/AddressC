@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+
 From fip_iris Require Import lang.
 
 Fixpoint append (xs : list Z) (ys : list Z) (acc : list Z -> list Z) :=

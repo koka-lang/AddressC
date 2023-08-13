@@ -1,6 +1,7 @@
 # AddressC
 
-AddressC is a frontend for [Iris's HeapLang](https://gitlab.mpi-sws.org/iris/iris) with a focus on easily proving functional correctness for idiomatic, imperative algorithms.
+AddressC is a frontend for [Iris's HeapLang](https://gitlab.mpi-sws.org/iris/iris)
+with a focus on easily proving functional correctness for idiomatic, imperative algorithms.
 It defines a syntactic layer around HeapLang to achieve an imperative-style syntax and provides primitives such as while-loops or structs
 inspired by projects such as [MiniC](https://gitlab.mpi-sws.org/iris/c) and [Bedrock 2](https://github.com/mit-plv/bedrock2).
 All primitives come with a high degree of automation thanks to [Diaframe](https://gitlab.mpi-sws.org/iris/diaframe).
@@ -17,8 +18,8 @@ fun reverse( xs : list<a>, acc : list<a> ) : list<a>
 
 This function reverses a list by appending the elements one-by-one onto an accumulator.
 Since it is tail-recursive, any functional language will compile it to an imperative while-loop.
-Additionally, a language with reuse analysis such as [Koka](https://koka-lang.github.io/koka/doc/index.html), [Lean](https://leanprover.github.io/) or [Roc](https://www.roc-lang.org/)
-can optimize this further: Assuming that the input `xs` is unique,
+Additionally, a language with reuse analysis such as [Koka](https://koka-lang.github.io/koka/doc/index.html)
+or [Lean](https://leanprover.github.io/) can optimize this further: Assuming that the input `xs` is unique,
 this function can _reuse_ the cells of the old list `xs` for the accumulator.
 In pseudo-code, Koka will emit code similar to the following:
 

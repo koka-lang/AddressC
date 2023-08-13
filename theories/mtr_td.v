@@ -1,3 +1,5 @@
+(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+
 From fip_iris Require Import lang tree tree_td mtr.
 
 Notation "e1 '->value'" :=
