@@ -4,7 +4,11 @@ AddressC is a frontend for [Iris's HeapLang](https://gitlab.mpi-sws.org/iris/iri
 with a focus on easily proving functional correctness for idiomatic, imperative algorithms.
 It defines a syntactic layer around HeapLang to achieve an imperative-style syntax and provides primitives such as while-loops or structs
 inspired by projects such as [MiniC](https://gitlab.mpi-sws.org/iris/c) and [Bedrock 2](https://github.com/mit-plv/bedrock2).
-All primitives come with a high degree of automation thanks to [Diaframe](https://gitlab.mpi-sws.org/iris/diaframe).
+All primitives come with a high degree of automation thanks to [Diaframe](https://gitlab.mpi-sws.org/iris/diaframe). The AddressC language has been
+used in particular to show correctness of various tree insertion 
+algorithms (see our [techreport][fiptree-tr]).
+
+[fiptree-tr]: https://www.microsoft.com/en-us/research/publication/a-functional-correspondence-between-top-down-and-bottom-up-tree-algorithms-fast-and-correct-fully-in-place-functions-with-first-class-constructor-contexts-and-zippers-tr/
 
 AddressC is especially powerful for imperative algorithms which arise naturally from a functional version.
 As an example, take the `reverse` function:
@@ -89,7 +93,7 @@ This repository contains several formalizations in AddressC including advanced o
 such as move-to-root trees, splay trees and zip trees. In these cases, it is even possible
 to obtain AddressC code which corresponds closely to the pseudo-code presented in the
 original papers. To learn more about this work,
-please refer [to our paper](https://www.microsoft.com/en-us/research/uploads/prod/2023/07/fiptree-tr.pdf):
+please refer [to our paper][fiptree-tr]:
 ```
 @TechReport{Lorenzen:correspondence,
   author = {Lorenzen, Anton and Leijen, Daan and Swierstra, Wouter and Lindley, Sam},
