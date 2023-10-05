@@ -132,15 +132,18 @@ Proof.
             ∗ rhole ↦ #rhv ∗ rhv ↦ rhvv ∗ is_ctx rz' rctx rhv
             ∗ ⌜td_insert_go i Hole Hole t = td_insert_go i lz' rz' t'⌝)%I.
   - unfold td_insert.
-    iDestruct "H" as (lz' l x rz' r ? ? ? ? ?) "[? [Ht [? [? [Hlhv [Hlz [? [Hrhv [Hrz ->]]]]]]]]]".
+    iDestruct "H" as (lz' l x rz' r ? ? ? ? ?)
+      "[? [Ht [? [? [Hlhv [Hlz [? [Hrhv [Hrz ->]]]]]]]]]".
     iDestruct "Ht" as (? ? ?) "[-> [? [Hl Hr]]]". unfold assemble. wp_heap.
-    iAssert (∃ tl, lctx ↦ tl ∗ is_tree (plug lz' l) tl)%I with "[Hlz Hlhv Hl]" as "[%tl [Hlz Hl]]". { wp_type. }
-    iAssert (∃ tr, rctx ↦ tr ∗ is_tree (plug rz' r) tr)%I with "[Hrz Hrhv Hr]" as "[%tr [Hrv Hr]]". { wp_type. }
+    iAssert (∃ tl, lctx ↦ tl ∗ is_tree (plug lz' l) tl)%I
+      with "[Hlz Hlhv Hl]" as "[%tl [Hlz Hl]]". { wp_type. }
+    iAssert (∃ tr, rctx ↦ tr ∗ is_tree (plug rz' r) tr)%I
+      with "[Hrz Hrhv Hr]" as "[%tr [Hrv Hr]]". { wp_type. }
     wp_heap. wp_type.
   - iDestruct "H" as (? ? t' ? ? ? ? ?) "[? [Ht [? [? [? [? [? [? [? ->]]]]]]]]]".
     unfold rotate_right, rotate_left, link_right, link_left.
     destruct t' as [|l x r].
-    + iDestruct "Ht" as %->. wp_heap. wp_type.
+    + iDecompose "Ht". wp_heap. wp_type.
     + iDestruct "Ht" as (? ? ?) "[-> [? [Hl Hr]]]". wp_heap.
       unfold td_insert_go at 1. case_bool_decide; wp_heap. 
       { wp_type. }

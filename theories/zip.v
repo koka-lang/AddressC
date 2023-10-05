@@ -118,53 +118,32 @@ Local Hint Unfold rebuild bu_insert_go bu_insert : trees.
 
 (* Top-down *)
 
-Inductive ctx0 : Set :=
-| Node0 (rk : Z) (z : ctx0) (x : Z) (r : tree)
-| Node2 (rk : Z) (l : tree) (x : Z) (z : ctx0)
-| Node0' (rk : Z) (* Hole *) (x : Z) (r : tree)
-| Node2' (rk : Z) (l : tree) (x : Z) (* Hole *).
-
 Inductive ctx : Set :=
-| Ctx0 (z : ctx0)
-| Hole.
+| Hole
+| Node0 (rk : Z) (l : ctx) (x : Z) (r : tree)
+| Node2 (rk : Z) (l : tree) (x : Z) (r : ctx).
 
-Fixpoint comp0 (z1 z2 : ctx0) : ctx0 :=
+Fixpoint comp (z1 : ctx) (z2 : ctx) :=
   match z1 with
-  | Node0 rk zl x r => Node0 rk (comp0 zl z2) x r
-  | Node2 rk l x zr => Node2 rk l x (comp0 zr z2)
-  | Node0' rk x r => Node0 rk z2 x r
-  | Node2' rk l x => Node2 rk l x z2 
-  end.
-
-Definition comp' (z1 : ctx) (z2 : ctx0) : ctx0 :=
-  match z1 with
-  | Ctx0 z1 => comp0 z1 z2
+  | Node0 rk zl x r => Node0 rk (comp zl z2) x r
+  | Node2 rk l x zr => Node2 rk l x (comp zr z2)
   | Hole => z2
   end.
 
-Definition comp (z1 : ctx) (z2 : ctx0) : ctx :=
-  Ctx0 (comp' z1 z2).
-
-Fixpoint plug0 (z : ctx0) (t : tree) : tree :=
+Fixpoint plug (z : ctx) (t : tree) : tree :=
   match z with
-  | Node0 rk zl x r => Node rk (plug0 zl t) x r
-  | Node2 rk l x zr => Node rk l x (plug0 zr t)
-  | Node0' rk x r => Node rk t x r
-  | Node2' rk l x => Node rk l x t
-  end.
-
-Definition plug (z : ctx) (t : tree) : tree :=
-  match z with
-  | Ctx0 z => plug0 z t
+  | Node0 rk zl x r => Node rk (plug zl t) x r
+  | Node2 rk l x zr => Node rk l x (plug zr t)
   | Hole => t
   end.
 
-Lemma comp_plug (z : ctx) (z' : ctx0) (t : tree)
-  : plug (comp z z') t = plug z (plug (Ctx0 z') t).
+Lemma comp_plug (z1 : ctx) (z2 : ctx) (t : tree)
+  : plug (comp z1 z2) t = plug z1 (plug z2 t).
 Proof.
-    destruct z.
-    - induction z; simpl; try (unfold plug, comp in IHz; rewrite IHz); done.
-    - unfold plug, comp; done.
+  induction z1.
+  - simpl; done.
+  - simpl; rewrite IHz1; done.
+  - simpl; rewrite IHz1; done.
 Qed.
 
 Fixpoint size (t : tree) :=
@@ -177,7 +156,7 @@ Fixpoint td_right (t : tree) (k : Z) (acc : ctx) :=
   match t with
   | Node rk l x r =>
     if bool_decide (x >= k)%Z then (t, acc)
-    else td_right r k (comp acc (Node2' rk l x))
+    else td_right r k (comp acc (Node2 rk l x Hole))
   | Leaf => (t, acc)
   end.
 
@@ -188,7 +167,7 @@ Proof.
   - simpl. lia.
   - unfold td_right. case_bool_decide.
     + simpl. lia.
-    + intro acc. specialize IHt2 with (comp acc (Node2' rk t1 x)).
+    + intro acc. specialize IHt2 with (comp acc (Node2 rk t1 x Hole)).
       fold td_right. simpl. lia.
 Qed.
 
@@ -196,7 +175,7 @@ Fixpoint td_left (t : tree) (k : Z) (acc : ctx) : tree * ctx :=
   match t with
   | Node rk l x r =>
     if bool_decide (x < k)%Z then (t, acc)
-    else td_left l k (comp acc (Node0' rk x r))
+    else td_left l k (comp acc (Node0 rk Hole x r))
   | Leaf => (t, acc)
   end.
 
@@ -207,7 +186,7 @@ Proof.
   - simpl. lia.
   - unfold td_left. case_bool_decide.
     + simpl. lia.
-    + intro acc. specialize IHt1 with (comp acc (Node0' rk x t2)).
+    + intro acc. specialize IHt1 with (comp acc (Node0 rk Hole x t2)).
       fold td_left. simpl. lia.
 Qed.
 
@@ -224,8 +203,8 @@ Equations? td_unzip (t : tree) (k : Z) (lctx rctx : ctx) : tree * tree by wf (si
   td_unzip Leaf _ lctx rctx :=
     (plug lctx Leaf, plug rctx Leaf).
 Proof.
-  - case_bool_decide; pose proof (td_right_size r k (comp lctx (Node2' rk l x))); lia.
-  - case_bool_decide; pose proof (td_left_size l k (comp rctx (Node0' rk x r))); lia.
+  - case_bool_decide; pose proof (td_right_size r k (comp lctx (Node2 rk l x Hole))); lia.
+  - case_bool_decide; pose proof (td_left_size l k (comp rctx (Node0 rk Hole x r))); lia.
 Qed.
 
 Fixpoint td_insert_go (t : tree) (rank : Z) (k : Z) (acc : ctx) : tree :=
@@ -233,8 +212,8 @@ Fixpoint td_insert_go (t : tree) (rank : Z) (k : Z) (acc : ctx) : tree :=
   | Node rk l x r =>
       if is_higher_rank rk rank x k then
         if bool_decide (x < k)%Z
-        then td_insert_go r rank k (comp acc (Node2' rk l x))
-        else td_insert_go l rank k (comp acc (Node0' rk x r))
+        then td_insert_go r rank k (comp acc (Node2 rk l x Hole))
+        else td_insert_go l rank k (comp acc (Node0 rk Hole x r))
       else if bool_decide (x = k)%Z then plug acc t
       else
         let (l, r) := td_unzip t k Hole Hole
@@ -886,7 +865,7 @@ Qed.
 Lemma td_right_step {i rk x : Z} (H : (x < i)%Z) : forall t1 t2 z1 z2,
   td_unzip (td_right (Node rk t1 x t2) i z1).1 i
     (td_right (Node rk t1 x t2) i z1).2 z2
-  = td_unzip t2 i (comp z1 (Node2' rk t1 x)) z2.
+  = td_unzip t2 i (comp z1 (Node2 rk t1 x Hole)) z2.
 Proof.
   intros. unfold td_right. case_bool_decide.
   - lia.
@@ -906,7 +885,7 @@ Qed.
 Lemma td_left_step {i rk x : Z} (H : (x >= i)%Z) : forall t1 t2 z1 z2,
   td_unzip (td_left (Node rk t1 x t2) i z2).1 i z1
     (td_left (Node rk t1 x t2) i z2).2
-  = td_unzip t1 i z1 (comp z2 (Node0' rk x t2)).
+  = td_unzip t1 i z1 (comp z2 (Node0 rk Hole x t2)).
 Proof.
   intros. unfold td_left. case_bool_decide.
   - lia.

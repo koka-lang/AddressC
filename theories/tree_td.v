@@ -8,7 +8,8 @@ Context `{!heapGS Σ}.
 Fixpoint is_tree (t : tree) (v : val) : iProp Σ :=
   match t with
   | Leaf => ⌜v = NULL⌝
-  | Node l x r => ∃ (p : loc) l' r', ⌜v = #p⌝ ∗ p ↦∗ [ l'; #x; r'] ∗ is_tree l l' ∗ is_tree r r'
+  | Node l x r => ∃ (p : loc) l' r', ⌜v = #p⌝
+    ∗ p ↦∗ [ l'; #x; r'] ∗ is_tree l l' ∗ is_tree r r'
   end.
 
 #[export]
@@ -41,106 +42,76 @@ Notation "l □↦∗ k dq vs" := (harray l k dq vs)
 
 Notation "□" := LitPoison.
 
-Fixpoint is_ctx0 (z : ctx0) (p : loc) (h : loc) : iProp Σ :=
+Fixpoint is_ctx (z : ctx) (p : loc) (h : loc) : iProp Σ :=
   match z with
-  | Node0 z x r => ∃ (z' : loc) r', p ↦∗ [ #z'; #x; r'] ∗ is_ctx0 z z' h ∗ is_tree r r'
-  | Node2 l x z => ∃ (z' : loc) l', p ↦∗ [ l'; #x; #z'] ∗ is_ctx0 z z' h ∗ is_tree l l'
-  | Node0' x r  => ∃ r', ⌜h = Loc.add p 0%nat⌝ ∗ p □↦∗ 0 [ #□; #x; r' ] ∗ is_tree r r'
-  | Node2' l x  => ∃ l', ⌜h = Loc.add p 2%nat⌝ ∗ p □↦∗ 2 [ l'; #x; #□ ] ∗ is_tree l l'
+  | Hole => ⌜h = p⌝
+  | Node0 l x r => ∃ (p' : loc) r', p ↦ #p' ∗ p' □↦∗ 0 [ #□; #x; r' ] ∗ is_ctx l (Loc.add p' 0%nat) h ∗ is_tree r r'
+  | Node2 l x r => ∃ (p' : loc) l', p ↦ #p' ∗ p' □↦∗ 2 [ l'; #x; #□ ] ∗ is_ctx r (Loc.add p' 2%nat) h ∗ is_tree l l'
+  end.
+
+Definition is_ctx0 (z : ctx) (p' : loc) (h : loc) : iProp Σ :=
+  match z with
+  | Hole => ⌜false⌝
+  | Node0 l x r => ∃ r', p' □↦∗ 0 [ #□; #x; r' ] ∗ is_ctx l (Loc.add p' 0%nat) h ∗ is_tree r r'
+  | Node2 l x r => ∃ l', p' □↦∗ 2 [ l'; #x; #□ ] ∗ is_ctx r (Loc.add p' 2%nat) h ∗ is_tree l l'
   end.
 
 #[export]
-Instance is_ctx0_node0'_hint (p : loc) (x : Z) (r' : val) (z : ctx0) :
-HINT (p +ₗ Z.succ 0%nat) ↦∗ [ #x; r' ] ✱ [ r ; is_tree r r' ∗ ⌜z = Node0' x r⌝]
-  ⊫ [id]; is_ctx0 z p (p +ₗ 0%nat) ✱ [⌜z = Node0' x r⌝].
+Instance is_ctx0_node0_hint (p : loc) (x : Z) (r' : val) (z : ctx) :
+HINT (p +ₗ 1%nat) ↦∗ [ #x; r' ] ✱ [ r ; is_tree r r' ∗ ⌜z = Node0 Hole x r⌝]
+  ⊫ [id]; is_ctx0 z p (p +ₗ 0%nat) ✱ [⌜z = Node0 Hole x r⌝].
 Proof. iSteps. cbn. iSteps. Qed.
 
 #[export]
-Instance is_ctx0_node2'_hint (p : loc) (x : Z) (l' : val) (z : ctx0) :
-HINT p ↦∗ [ l'; #x ] ✱ [ l ; is_tree l l' ∗ ⌜z = Node2' l x⌝]
-  ⊫ [id]; is_ctx0 z p (p +ₗ 2%nat) ✱ [⌜z = Node2' l x ⌝].
+Instance is_ctx0_node2_hint (p : loc) (x : Z) (l' : val) (z : ctx) :
+HINT p ↦∗ [ l'; #x ] ✱ [ l ; is_tree l l' ∗ ⌜z = Node2 l x Hole⌝]
+  ⊫ [id]; is_ctx0 z p (p +ₗ 2%nat) ✱ [⌜z = Node2 l x Hole⌝].
 Proof. iSteps. cbn. iSteps. Qed.
-
-Definition is_ctx (z : ctx) (p : loc) (h : loc) : iProp Σ :=
-  match z with
-  | Ctx0 z' => ∃ (zv : loc), p ↦ #zv ∗ is_ctx0 z' zv h
-  | Hole   => ⌜h = p⌝
-  end.
 
 #[export]
 Instance is_ctx_hole_hint z p :
 HINT ε₁ ✱ [- ; ⌜z = Hole⌝] ⊫ [id]; is_ctx z p p ✱ [⌜z = Hole⌝].
 Proof. iSteps. Qed.
 
-Lemma tree_of_ctx0 (z : ctx0) (t : tree) (zv : loc) (hv : loc) (tv : val) :
-    is_ctx0 z zv hv ∗ hv ↦ tv ∗ is_tree t tv -∗ is_tree (plug0 z t) #zv.
+Lemma ctx_of_ctx0 (z : ctx) (p : loc) (h : loc) :
+    (∃ (p' : loc), p ↦ #p' ∗ is_ctx0 z p' h) -∗ is_ctx z p h.
 Proof.
-  iIntros "[Hz [Hhv Ht]]". iInduction z as [z x r|l x z|x r|l x] "IH" forall (zv hv t).
-  - iDestruct "Hz" as (z' r') "[Hp [Hz Hr]]". iSteps.
-  - iDestruct "Hz" as (z' l') "[Hp [Hz Hl]]". iSteps.
-    unseal_diaframe => /=. iExists hv. iFrame. unfold is_ctx0 at 2. unfold harray. iApply "Hz".
-  - iDestruct "Hz" as (r') "[Hh [Hp Hr]]". 
-    iAssert ((zv +ₗ 0) ↦ tv)%I with "[Hh Hhv]" as "Hhv".
-      { iDestruct "Hh" as %->. done. }
-    iAssert (zv ↦∗ [ tv; #x; r'])%I with "[Hp Hhv]" as "Hp'".
-      { unfold array, harray. iSteps. }
-    iSteps.
-  - iDestruct "Hz" as (l') "[Hh [Hp Hl]]".
-    iAssert ((zv +ₗ 2) ↦ tv)%I with "[Hh Hhv]" as "Hhv".
-      { iDestruct "Hh" as %->. done. }
-    iAssert (zv ↦∗ [ l'; #x; tv ])%I with "[Hp Hhv]" as "Hp'".
-      { unfold array, harray. iSteps. }
-    iSteps.
-Qed.
-
-#[export]
-Instance tree_of_ctx0_hint z t t' zv hv tv :
-HINT is_ctx0 z zv hv ✱ [- ; hv ↦ tv ∗ is_tree t tv ∗ ⌜t' = plug0 z t⌝]
-  ⊫ [id]; is_tree (plug0 z t) #zv ✱ [⌜t' = plug0 z t⌝].
-Proof.
-  iSteps. iSplitL. iApply (tree_of_ctx0). iFrame. done.
+  iIntros "[%p' [Hp Hz]]". iInduction z as [|z x r|l x z] "IH" forall (p h).
+  - iDecompose "Hz".
+  - iDecompose "Hz". iExists p', x. iSteps.
+  - iDecompose "Hz". iExists p', x0. iSteps.
 Qed.
 
 Lemma tree_of_ctx (z : ctx) (t : tree) (zv : loc) (hv : loc) (tv : val) :
     is_ctx z zv hv ∗ hv ↦ tv ∗ is_tree t tv -∗ ∃ zv', zv ↦ zv' ∗ is_tree (plug z t) zv'.
 Proof.
-  iIntros "[Hz [Hhv Ht]]". iInduction z as [z|] "IH" forall (zv hv t); iStopProof; iSteps.
+  iIntros "[Hz [Hhv Ht]]". iInduction z as [|z x r|l x z] "IH" forall (zv hv t).
+  - iDecompose "Hz". iExists tv. iFrame.
+  - iDecompose "Hz". iExists #x. iFrame.
+    iAssert (∃ l', (Loc.add x 0%nat) ↦ l' ∗ is_tree (plug z t) l')%I with "[H5 Ht Hhv]" as "[%l' [Hl' Hl]]".
+      { iSteps. }
+    iExists x, l', x0. unfold array, harray. iSteps.
+  - iDecompose "Hz". iExists #x0. iFrame.
+    iAssert (∃ r', (Loc.add x0 2%nat) ↦ r' ∗ is_tree (plug z t) r')%I with "[H5 Ht Hhv]" as "[%r' [Hr' Hr]]".
+      { iSteps. }
+    iExists x0, x1, r'. unfold array, harray. iSteps.
 Qed.
 
-Lemma ctx0_of_ctx0 (z1 : ctx0) (z2 : ctx0) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
-    is_ctx0 z1 zv1 hv1 ∗ hv1 ↦ #zv2 ∗ is_ctx0 z2 zv2 hv2 -∗ is_ctx0 (comp0 z1 z2) zv1 hv2.
+Lemma ctx0_of_ctx (z1 : ctx) (z2 : ctx) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
+    is_ctx z1 zv1 hv1 ∗ hv1 ↦ #zv2 ∗ is_ctx0 z2 zv2 hv2 -∗ ∃ (zv1' : loc), zv1 ↦ #zv1' ∗ is_ctx0 (comp z1 z2) zv1' hv2.
 Proof.
-  iIntros "[Hz [Hhv Ht]]". iInduction z1 as [z x r|l x z|x r|l x] "IH" forall (zv1 hv1 z2 zv2 hv2).
-  - iDestruct "Hz" as (z' r') "[Hp [Hz Hr]]".
-    iExists z', r'. iSteps.
-  - iDestruct "Hz" as (z' l') "[Hp [Hz Hl]]".
-    iExists z', l'. iSteps.
-  - iDestruct "Hz" as (r') "[Hh [Hp Hr]]".
-    iAssert ((zv1 +ₗ 0) ↦ #zv2)%I with "[Hh Hhv]" as "Hhv".
-      { iDestruct "Hh" as %->. done. }
-    iAssert (zv1 ↦∗ [ #zv2; #x; r' ])%I with "[Hp Hhv]" as "Hp'".
-      { unfold array, harray. iSteps. }
-    iExists zv2, r'. iSteps.
-  - iDestruct "Hz" as (l') "[Hh [Hp Hl]]".
-    iAssert ((zv1 +ₗ 2) ↦ #zv2)%I with "[Hh Hhv]" as "Hhv".
-      { iDestruct "Hh" as %->. done. }
-    iAssert (zv1 ↦∗ [ l'; #x; #zv2 ])%I with "[Hp Hhv]" as "Hp'".
-      { unfold array, harray. iSteps. }
-    iExists zv2, l'. iSteps.
+  iIntros "[Hz [Hhv Ht]]". iInduction z1 as [|z x r|l x z] "IH" forall (zv1 hv1 z2 zv2 hv2).
+  - iDecompose "Hz". iExists zv2. iFrame.
+  - iDecompose "Hz". iExists x. iFrame. iExists x0. iFrame.
+    iApply (ctx_of_ctx0). iSteps.
+  - iDecompose "Hz". iExists x0. iFrame. iExists x1. iFrame.
+    iApply (ctx_of_ctx0). iSteps.
 Qed.
 
-Lemma ctx0_of_ctx (z1 : ctx) (z2 : ctx0) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
-    is_ctx z1 zv1 hv1 ∗ hv1 ↦ #zv2 ∗ is_ctx0 z2 zv2 hv2 -∗ ∃ (zv1' : loc), zv1 ↦ #zv1' ∗ is_ctx0 (comp' z1 z2) zv1' hv2.
-Proof.
-  iIntros "[Hz [Hhv Ht]]". iInduction z1 as [z|] "IH" forall (zv1 hv1 z2 zv2 hv2).
-  - iSteps. iApply (ctx0_of_ctx0). iSteps.
-  - iDestruct "Hz" as %->. iSteps.
-Qed.
-
-Lemma ctx_of_ctx (z1 : ctx) (z2 : ctx0) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
+Lemma ctx_of_ctx (z1 : ctx) (z2 : ctx) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
     is_ctx z1 zv1 hv1 ∗ hv1 ↦ #zv2 ∗ is_ctx0 z2 zv2 hv2 -∗ is_ctx (comp z1 z2) zv1 hv2.
 Proof.
-  iPoseProof (ctx0_of_ctx z1 z2) as "H". iSteps.
+  iIntros "[Hz [Hhv Ht]]". iApply (ctx_of_ctx0). iApply (ctx0_of_ctx). iSteps.
 Qed.
 
 #[export]
@@ -148,7 +119,7 @@ Instance ctx_of_ctx_hint z1 z2 z' zv1 hv1 (zv2 : loc) hv2 :
 HINT is_ctx z1 zv1 hv1 ✱ [- ; hv1 ↦ #zv2 ∗ is_ctx0 z2 zv2 hv2 ∗ ⌜z' = (comp z1 z2)⌝]
   ⊫ [id]; is_ctx z' zv1 hv2 ✱ [⌜z' = (comp z1 z2)⌝] | 100.
 Proof.
-  iStep. iSplitL. iApply (ctx0_of_ctx). iFrame. done.
+  iStep. iSplitL. iApply (ctx_of_ctx). iFrame. done.
 Qed.
 
 #[export]

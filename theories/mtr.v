@@ -75,9 +75,9 @@ Fixpoint td_insert_go (i : Z) (lctx : ctx) (rctx : ctx) (t : tree) : tree :=
       if bool_decide (x = i)%Z then
         Node (plug lctx l) i (plug rctx r)
       else if bool_decide (i < x)%Z then
-        td_insert_go i lctx (comp rctx (Node0' x r)) l
+        td_insert_go i lctx (comp rctx (Node0 Hole x r)) l
       else
-        td_insert_go i (comp lctx (Node2' l x)) rctx r
+        td_insert_go i (comp lctx (Node2 l x Hole)) rctx r
     | Leaf => Node (plug lctx Leaf) i (plug rctx Leaf)
     end.
 

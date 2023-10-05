@@ -151,22 +151,22 @@ Fixpoint td_insert_go (i : Z) (lctx : ctx) (rctx : ctx) (t : tree) :=
       match l with
       | Node ll lx lr =>
         if bool_decide (i = lx)%Z then
-          (lctx, Root ll i lr, comp rctx (Node0' x r))
+          (lctx, Root ll i lr, comp rctx (Node0 Hole x r))
         else if bool_decide (i < lx)%Z then
-          td_insert_go i lctx (comp rctx (Node0' lx (Node lr x r))) ll
+          td_insert_go i lctx (comp rctx (Node0 Hole lx (Node lr x r))) ll
         else
-          td_insert_go i (comp lctx (Node2' ll lx)) (comp rctx (Node0' x r)) lr
+          td_insert_go i (comp lctx (Node2 ll lx Hole)) (comp rctx (Node0 Hole x r)) lr
       | Leaf => (lctx, Root Leaf i (Node Leaf x r), rctx)
       end
     else
       match r with
       | Node rl rx rr =>
         if bool_decide (i = rx)%Z then
-          (comp lctx (Node2' l x), Root rl i rr, rctx)
+          (comp lctx (Node2 l x Hole), Root rl i rr, rctx)
         else if bool_decide (i > rx)%Z then
-          td_insert_go i (comp lctx (Node2' (Node l x rl) rx)) rctx rr
+          td_insert_go i (comp lctx (Node2 (Node l x rl) rx Hole)) rctx rr
         else
-          td_insert_go i (comp lctx (Node2' l x)) (comp rctx (Node0' rx rr)) rl
+          td_insert_go i (comp lctx (Node2 l x Hole)) (comp rctx (Node0 Hole rx rr)) rl
       | Leaf => (lctx, Root (Node l x Leaf) i Leaf, rctx)
       end
   | Leaf => (lctx, Root Leaf i Leaf, rctx)
@@ -188,14 +188,10 @@ Proof.
   autounfold with trees.
   repeat case_bool_decide.
   - done.
-  - destruct l as [|ll lx lr]. { done. } repeat case_bool_decide.
-    + done.
-    + now rewrite <- IH.
-    + now rewrite <- IH.
-  - destruct r as [|rl rx rr]. { done. } repeat case_bool_decide.
-    + done.
-    + now rewrite <- IH.
-    + now rewrite <- IH.
+  - destruct l as [|ll lx lr]. { done. }
+    repeat case_bool_decide; try done; now rewrite <- IH.
+  - destruct r as [|rl rx rr]. { done. }
+    repeat case_bool_decide; try done; now rewrite <- IH.
 Qed.
 
 Lemma rec_is_bu (i : Z) (t : tree) : rec_insert i t = bu_insert i t.
@@ -211,7 +207,8 @@ Proof.
   autounfold with trees.
   repeat case_bool_decide.
   - done.
-  - destruct l as [|ll lx lr]. { done. } repeat case_bool_decide.
+  - destruct l as [|ll lx lr]. { done. }
+    repeat case_bool_decide.
     + now rewrite comp_plug.
     + rewrite <- IH. now rewrite comp_plug.
     + rewrite <- IH. now do 2 rewrite comp_plug.
@@ -240,20 +237,3 @@ Proof. reflexivity. Qed.
 Lemma bu_example : bu_insert_pub 4 example_tree
   = Node (Node Leaf 1 (Node (Node Leaf 2 Leaf) 3 Leaf)) 4 Leaf.
 Proof. reflexivity. Qed.
-
-(* Properties of splay trees *)
-
-Inductive all (P : Z -> Type) : tree -> Type :=
-| all_leaf : all P Leaf
-| all_node : forall {l : tree} {x : Z} {r : tree},
-             all P l -> P x -> all P r -> all P (Node l x r).
-
-Local Hint Constructors all : trees.
-
-Lemma all_impl {P Q : Z → Set} {t : tree} (H : all P t) (f : forall x : Z, P x → Q x) : all Q t.
-Proof.
-  induction t; [ now trivial with trees | ].
-  inversion H; now auto with trees.
-Qed.
-
-Local Hint Resolve all_impl : trees.
