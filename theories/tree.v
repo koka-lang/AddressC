@@ -33,7 +33,7 @@ Inductive ctx : Set :=
 | Node0 (l : ctx) (x : Z) (r : tree)
 | Node2 (l : tree) (x : Z) (r : ctx).
 
-Fixpoint comp (z1 : ctx) (z2 : ctx) :=
+Fixpoint comp (z1 : ctx) (z2 : ctx) : ctx :=
   match z1 with
   | Node0 zl x r => Node0 (comp zl z2) x r
   | Node2 l x zr => Node2 l x (comp zr z2)

@@ -21,9 +21,9 @@ Proof. iSteps. Qed.
 
 #[export]
 Instance is_tree_node_hint (p : loc) (rk x : Z) (l_r l_l : val) t :
-HINT p ↦∗ [ #1; #rk; l_l; #x; l_r] ✱ [ l r ; is_tree l l_l ∗ is_tree r l_r ∗ ⌜t = Node rk l x r⌝]
+HINT ε₁ ✱ [ l r; (p +ₗ 0) ↦ #1 ∗ (p +ₗ 1) ↦ #rk ∗ (p +ₗ 2) ↦ l_l ∗ (p +ₗ 3) ↦ #x ∗ (p +ₗ 4) ↦ l_r ∗ is_tree l l_l ∗ is_tree r l_r ∗ ⌜t = Node rk l x r⌝]
   ⊫ [id]; is_tree t #p ✱ [⌜t = Node rk l x r⌝].
-Proof. iSteps. Qed.
+Proof. unfold is_tree, array. simpl. iSteps. Qed.
 
 Fixpoint is_zipper `{!heapGS Σ}  (z : zipper) (v : val) : iProp Σ :=
   match z with
@@ -40,16 +40,14 @@ HINT ε₁ ✱ [- ; ⌜t = Done⌝] ⊫ [id]; is_zipper t NULL ✱ [⌜t = Done�
 Proof. iSteps. Qed.
 
 #[export]
-Instance is_zipper_nodel_hint (p : loc) (rk x : Z) (l_l l_r : val) t :
-HINT p ↦∗ [ #1; #rk; l_l; #x; l_r] ✱ [l r ; is_zipper l l_l ∗ is_tree r l_r ∗ ⌜t = NodeL rk l x r⌝]
-  ⊫ [id]; is_zipper t #p ✱ [⌜t = NodeL rk l x r⌝].
-Proof. iSteps. Qed.
-
-#[export]
-Instance is_zipper_noder_hint (p : loc) (rk x : Z) (l_l l_r : val) t :
-HINT p ↦∗ [ #2; #rk; l_l; #x; l_r] ✱ [l r ; is_tree l l_l ∗ is_zipper r l_r ∗ ⌜t = NodeR rk l x r⌝]
-  ⊫ [id]; is_zipper t #p ✱ [⌜t = NodeR rk l x r⌝].
-Proof. iSteps. Qed.
+Instance is_zipper_node_hint (p : loc) t :
+HINT ε₁ ✱ [ (tag : Z) z (x rk : Z) t' l_l l_r; (p +ₗ 0) ↦ #tag ∗ (p +ₗ 1) ↦ #rk ∗(p +ₗ 2) ↦ l_l ∗ (p +ₗ 3) ↦ #x ∗ (p +ₗ 4) ↦ l_r ∗
+  (if Z.eqb tag 1 then is_zipper z l_l ∗ is_tree t' l_r ∗ ⌜t = NodeL rk z x t'⌝
+                  else is_tree t' l_l ∗ is_zipper z l_r ∗ ⌜t = NodeR rk t' x z⌝ ∗ ⌜tag = 2⌝)]
+  ⊫ [id]; is_zipper t #p ✱ [(if Z.eqb tag 1 then ⌜t = NodeL rk z x t'⌝
+                                            else ⌜t = NodeR rk t' x z⌝)].
+Proof. iSteps as (? ? ? ? ? ? ?) "H1 H2 H3 H4 H5 H6". destruct (x =? 1)%Z eqn:H7;
+       iDecompose "H6"; unfold array; iSteps. Qed.
 
 Notation "e1 '->tag'" :=
   (Load (BinOp OffsetOp e1%E (Val (LitV (LitInt (Z.of_nat 0))))))
@@ -174,7 +172,7 @@ Proof.
             ∗ ⌜rebuild z t = rebuild z' t'⌝)%I.
   - iDecompose "H". now wp_heap.
   - iDestruct "H" as (? ? ? ?) "[? [? [? [Hz ->]]]]".
-    destruct z'; iDecompose "Hz"; wp_heap; wp_type.
+    destruct z'; iDecompose "Hz"; wp_type.
   - wp_type.
 Qed.
 
@@ -200,11 +198,9 @@ Proof.
     wp_apply (heap_rebuild_correct zb' Leaf with "[Hzb Hb H]"). { wp_type. }
     iIntros. wp_alloc H' as "H".
     wp_apply (heap_rebuild_correct zs' Leaf with "[Hzs Hs H]"). { wp_type. }
-    iIntros. wp_heap. wp_type.
+    wp_type.
   - iDestruct "H" as (t' ? ? ? ? ?) "[? [Ht' [? [? [? [? [? ->]]]]]]]".
-    destruct t'; iDecompose "Ht'".
-    + wp_heap. wp_type.
-    + wp_heap. unfold bu_unzip. case_bool_decide; wp_heap; wp_type.
+    unfold bu_unzip. destruct t'; iDecompose "Ht'"; wp_type.
   - wp_type.
 Qed.
 
@@ -225,21 +221,20 @@ Proof.
             ∗ ⌜bu_insert_go t rank k z = bu_insert_go t' rank k z'⌝)%I.
   - iDestruct "H" as (t' z' ? ?) "[? [? [? [? [? [? ->]]]]]]". wp_heap.
     wp_apply (heap_rebuild_correct z' t' with "[-]"). { wp_type. }
-    iIntros. wp_type.
+    wp_type.
   - iDestruct "H" as (t' z' ? ?) "[? [Ht [? [? [? [Hz ->]]]]]]".
     destruct t' as [|rk l x r].
-    + iDestruct "Ht" as %->. wp_heap. wp_type.
+    + iDecompose "Ht". wp_type.
     + iDestruct "Ht" as (p l' r') "[-> [Hp [Hl Hr]]]". wp_heap.
       wp_apply (heap_is_higher_rank_correct rk rank x k). { done. }
       iIntros (v) "[%b [Hv Hb]]". unfold bu_insert_go.
       destruct b; iDestruct "Hv" as %->; iDestruct "Hb" as %<-.
-      { wp_heap. case_bool_decide; wp_heap; wp_type. }
+      { wp_type. }
       { wp_heap. case_bool_decide.
-        - wp_heap. wp_type.
+        - wp_type.
         - wp_pures. wp_load. wp_alloc Hk as "Hk'". wp_load. wp_alloc Ht as "Ht'".
           wp_apply (heap_unzip_correct (Node rk l x r) k with "[Hp Hl Hr Hk' Ht']").
-          { wp_type. } iIntros (v) "[%s [%b [Hv [Hs' Hb']]]]". iDestruct "Hv" as %->.
-          wp_heap. wp_type; now destruct bu_unzip. }
+          { wp_type. } wp_type; now destruct bu_unzip. }
   - wp_type.
 Qed.
 

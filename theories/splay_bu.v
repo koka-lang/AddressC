@@ -32,12 +32,10 @@ Definition heap_splay : val :=
             rotate_right (&px) (&x)
           } else {
             if: (gx->tag == #1) {
-              rotate_right (&gx) (&px);;
-              rotate_right (&px) (&x);;
+              rotate_right (&gx) (&px);; rotate_right (&px) (&x);;
               px = gx
             } else {
-              rotate_right (&px) (&x);;
-              rotate_left (&px) (&x)
+              rotate_right (&px) (&x);; rotate_left (&px) (&x)
             }
           }
         } else {
@@ -195,15 +193,21 @@ Proof.
   - iDecompose "H". now wp_heap. 
   - iDestruct "H" as (t' z' ? ?) "[? [Ht' [? [Hz ->]]]]".
     unfold rotate_right. unfold rotate_left. 
-    destruct t' as [tl tx tr]. iDecompose "Ht'".
+    destruct t'. iDecompose "Ht'".
     destruct z' as [|lup lx lr|rl rx rup].
-    + iDestruct "Hz" as %->. wp_heap. wp_type.
+    + iDecompose "Hz". wp_type.
     + iDestruct "Hz" as (? ? ?) "[-> [? [Hup ?]]]". wp_heap.
       destruct lup; iDecompose "Hup"; wp_heap; wp_type.
     + iDestruct "Hz" as (? ? ?) "[-> [? [Hup ?]]]". wp_heap.
       destruct rup; iDecompose "Hup"; wp_heap; wp_type.
   - wp_type.
 Qed.
+
+Global Instance heap_splay_correct_instance (z : zipper) (t : root_tree) (zv tv : val) (zipper tree : loc)  :
+    SPEC {{ zipper ↦ zv ∗ is_zipper z zv ∗ tree ↦ tv ∗ is_root_tree t tv }}
+    heap_splay #zipper #tree
+    {{ v, RET v; is_root_tree (splay z t) v }}.
+Proof. iStep. wp_apply (heap_splay_correct with "[-]"); iSteps. Qed.
 
 Lemma heap_bu_insert_pub_correct (i : Z) (tv : val) (t : tree) :
     {{{ is_tree t tv }}}
@@ -219,14 +223,9 @@ Proof.
             tree ↦ treev ∗ is_tree t' treev ∗ ref_i ↦ #i
             ∗ zipper ↦ zipperv ∗ is_zipper z' zipperv
             ∗ ⌜bu_insert_pub i t = to_tree (bu_insert_pub_go i z' t')⌝)%I.
-  - iDestruct "H" as (t' z' treev zipperv) "[? [Ht [? [? [Hz ->]]]]]". wp_heap.
-    wp_apply (heap_splay_correct z' t' with "[-]"). { wp_type. }
-    destruct (splay z' t'). wp_type.
+  - iDecompose "H". iSteps as (?) "H2". destruct splay. iDecompose "H2". wp_type.
   - iDestruct "H" as (t' ? ? ?) "[? [Ht [? [? [? ->]]]]]".
-    unfold bu_insert_pub_go at 1. destruct t'; iDecompose "Ht".
-    + wp_heap. wp_type.
-    + wp_heap. case_bool_decide; wp_heap.
-      { wp_type. } { case_bool_decide; wp_heap; wp_type. }
+    unfold bu_insert_pub_go at 1. destruct t'; iDecompose "Ht"; wp_type.
   - wp_type.
 Qed.
 
@@ -244,24 +243,16 @@ Proof.
             tree ↦ treev ∗ is_tree t' treev ∗ ref_i ↦ #i
             ∗ zipper ↦ zipperv ∗ is_zipper z' zipperv
             ∗ ⌜bu_insert i t = to_tree (bu_insert_go i z' t')⌝)%I.
-  - iDestruct "H" as (t' z' treev zipperv) "[? [Ht [? [? [Hz ->]]]]]". wp_heap.
-    wp_apply (heap_splay_correct z' t' with "[-]"). { wp_type. }
-    destruct (splay z' t'). wp_type.
+  - iDecompose "H". iSteps as (?) "H2". destruct splay. iDecompose "H2". wp_type.
   - iDestruct "H" as (t' z' ? ?) "[? [Ht [? [? [Hz ->]]]]]".
     destruct t' as [|l x r].
-    + iDestruct "Ht" as %->. wp_heap. wp_type.
+    + iDecompose "Ht". wp_type.
     + iDestruct "Ht" as (? ? ?) "[-> [? [Hl Hr]]]". wp_heap.
       unfold bu_insert_go at 1. case_bool_decide; wp_heap.
       { wp_type. }
       { case_bool_decide; wp_heap.
-        - destruct l; iDecompose "Hl".
-          + wp_heap. wp_type.
-          + wp_heap. case_bool_decide; wp_heap.
-            { wp_type. } { case_bool_decide; wp_heap; wp_type. }
-        - destruct r; iDecompose "Hr".
-          + wp_heap. wp_type.
-          + wp_heap. case_bool_decide; wp_heap.
-            { wp_type. } { case_bool_decide; wp_heap; wp_type. } }
+        - destruct l; iDecompose "Hl"; wp_heap; wp_type.
+        - destruct r; iDecompose "Hr"; wp_heap; wp_type. }
   - wp_type.
 Qed.
 

@@ -73,13 +73,8 @@ Proof.
             ∗ left_hook ↦ #lhv ∗ lhv ↦ lhvv ∗ is_ctx lz' left_dummy lhv
             ∗ right_hook ↦ #rhv∗ rhv ↦ rhvv ∗ is_ctx rz' right_dummy rhv
             ∗ ⌜td_insert i t = td_insert_go i lz' rz' t'⌝)%I.
-  - iDecompose "H". wp_heap. wp_type.
-  - iDestruct "H" as (lz' ? t' ? ? ? ? ? ?) "[? [Ht H]]".
-    iDecompose "H". rewrite H. unfold td_insert_go at 1.
-    destruct t'; iDecompose "Ht".
-    + wp_heap. wp_type.
-    + wp_heap. case_bool_decide; wp_heap.
-      { wp_type. } { case_bool_decide; wp_heap; wp_type. }
+  - iDecompose "H". wp_type.
+  - iDecompose "H". rewrite H1. wp_type; unfold array; wp_type.
   - wp_type.
 Qed.
 

@@ -68,24 +68,19 @@ Proof. iSteps. Qed.
 Lemma ctx_of_ctx0 (z : ctx) (p : loc) (h : loc) :
     (∃ (p' : loc), p ↦ #p' ∗ is_ctx0 z p' h) -∗ is_ctx z p h.
 Proof.
-  iIntros "[%p' [Hp Hz]]". iInduction z as [|rk z x r|rk l x z] "IH" forall (p h).
-  - iDecompose "Hz".
-  - iDecompose "Hz". iExists p', x. iSteps.
-  - iDecompose "Hz". iExists p', x0. iSteps.
+  iIntros "[%p' [? Hz]]". iInduction z as [] "IH" forall (p h); iDecompose "Hz"; iSteps.
 Qed.
 
 Lemma tree_of_ctx (z : ctx) (t : tree) (zv : loc) (hv : loc) (tv : val) :
     is_ctx z zv hv ∗ hv ↦ tv ∗ is_tree t tv -∗ ∃ zv', zv ↦ zv' ∗ is_tree (plug z t) zv'.
 Proof.
   iIntros "[Hz [Hhv Ht]]". iInduction z as [|rk z x r|rk l x z] "IH" forall (zv hv t).
-  - iDecompose "Hz". iExists tv. iFrame.
-  - iDecompose "Hz". iExists #x. iFrame.
-    iAssert (∃ l', (Loc.add x 1%nat) ↦ l' ∗ is_tree (plug z t) l')%I with "[H5 Ht Hhv]" as "[%l' [Hl' Hl]]".
-      { iSteps. }
+  - iDecompose "Hz". iSteps.
+  - iDecompose "Hz" as (? ?) "H1 H2 H3 H4". iExists #x. iFrame.
+    iPoseProof ("IH" $! (Loc.add x 1) hv t with "H3 Hhv Ht") as "[%l' [H1' H2']]".
     iExists x, l', x0. unfold array, harray. iSteps.
-  - iDecompose "Hz". iExists #x0. iFrame.
-    iAssert (∃ r', (Loc.add x0 3%nat) ↦ r' ∗ is_tree (plug z t) r')%I with "[H5 Ht Hhv]" as "[%r' [Hr' Hr]]".
-      { iSteps. }
+  - iDecompose "Hz" as (? ?) "H1 H2 H3 H4". iExists #x0. iFrame.
+    iPoseProof ("IH" $! (Loc.add x0 3) hv t with "H3 Hhv Ht") as "[%r' [H1' H2']]".
     iExists x0, x1, r'. unfold array, harray. iSteps.
 Qed.
 
@@ -95,9 +90,9 @@ Proof.
   iIntros "[Hz [Hhv Ht]]". iInduction z1 as [|rk z x r|rk l x z] "IH" forall (zv1 hv1 z2 zv2 hv2).
   - iDecompose "Hz". iExists zv2. iFrame.
   - iDecompose "Hz". iExists x. iFrame. iExists x0. iFrame.
-    iApply (ctx_of_ctx0). iSteps.
+    iApply (ctx_of_ctx0). iSteps. repeat rewrite (Loc.add_0). iSteps.
   - iDecompose "Hz". iExists x0. iFrame. iExists x1. iFrame.
-    iApply (ctx_of_ctx0). iSteps.
+    iApply (ctx_of_ctx0). iSteps. repeat rewrite (Loc.add_0). iSteps.
 Qed.
 
 Lemma ctx_of_ctx (z1 : ctx) (z2 : ctx) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
@@ -119,7 +114,15 @@ Instance tree_of_ctx_hint z t t' zv hv tv :
 HINT is_ctx z zv hv ✱ [- ; hv ↦ tv ∗ is_tree t tv ∗ ⌜t' = plug z t⌝]
   ⊫ [id] zv'; zv ↦ zv' ✱ [ is_tree t' zv' ∗ ⌜t' = plug z t⌝].
 Proof.
-  iStartProof. simpl. iStep. iPoseProof (tree_of_ctx) as "?". iSteps.
+  iStartProof. simpl. iStep. iPoseProof (tree_of_ctx z t zv hv) as "?". iSteps.
+Qed.
+
+#[export]
+Instance tree_of_ctx_df_hint z t t' zv hv tv :
+HINT is_ctx z zv hv ✱ [- ; hv ↦ tv ∗ is_tree t tv ∗ ⌜t' = plug z t⌝]
+  ⊫ [id] zv' df; zv ↦{ df } zv' ✱ [ is_tree t' zv' ∗ ⌜t' = plug z t⌝].
+Proof.
+  iStartProof. simpl. iStep. iPoseProof (tree_of_ctx z t zv hv) as "?". iSteps.
 Qed.
 
 Opaque is_ctx.
@@ -186,18 +189,18 @@ Lemma heap_right_correct (l r : tree) (rk k x : Z) (H : (x < k)%Z) (acc : ctx) (
           #accl <- (✲#cur) +ₗ #3%nat;;
           #cur <- (✲#cur)〚3〛
         } until: ((✲#cur == NULL) || ((✲#cur)〚2〛>= (✲ #ref_k)))
-    {{{ v, RET v; ∃ (h' : loc) tv',
+    {{{ v, RET v; ∃ (h' : loc) tv', ⌜v = #()⌝ ∗
         cur ↦ tv' ∗ is_tree (td_right (Node rk l x r) k acc).1 tv' ∗ ref_k ↦ #k
       ∗ accl ↦ #h' ∗ h' ↦ tv' ∗ is_ctx (td_right (Node rk l x r) k acc).2 accv h' }}}.
 Proof.
   iIntros (Φ). iIntros "[Hcur [Ht [Hk [Haccl [Hctx Hh]]]]]". iIntros "Hphi". 
   iDestruct "Ht" as (p' l' r') "[-> [Hp [Hl Hr]]]". wp_load.
   wp_store. wp_load. wp_load_offset. wp_store. wp_apply wp_wand_l.
-  iSplitL "Hphi". iFrame. wp_while
+  iSplitL "Hphi". iFrame. wp_apply (wp_while_inv
     (∃ t' acc' (h' : loc) curv,
             cur ↦ curv ∗ is_tree t' curv ∗ ref_k ↦ #k
             ∗ accl ↦ #h' ∗ h' ↦ curv ∗ is_ctx acc' accv h'
-            ∗ ⌜td_right (Node rk l x r) k acc = td_right t' k acc'⌝)%I.
+            ∗ ⌜td_right (Node rk l x r) k acc = td_right t' k acc'⌝)%I).
   - iModIntro. iIntros "H". iDestruct "H" as (t' acc' h' curv) "[Hcur [Ht' [? [Hlacc [Hh' [Hctx ->]]]]]]".
     wp_load. destruct t' as [|rk'' l'' x'' r''].
     + iDestruct "Ht'" as %->. wp_type.
@@ -217,6 +220,18 @@ Proof.
     + case_bool_decide. lia. done.
 Qed.
 
+Global Instance heap_right_correct_instance (l r : tree) (rk k x : Z) (H : (x < k)%Z) (acc : ctx) (cur accl ref_k : loc) (tv : val) (accv h : loc) :
+    SPEC {{ cur ↦ tv ∗ is_tree (Node rk l x r) tv ∗ ref_k ↦ #k
+      ∗ accl ↦ #h ∗ is_ctx acc accv h ∗ h ↦ tv }}
+        (repeat: {
+          #accl <- (✲#cur) +ₗ #3%nat;;
+          #cur <- (✲#cur)〚3〛
+        } until: ((✲#cur == NULL) || ((✲#cur)〚2〛>= (✲ #ref_k))))%E
+    {{ RET #(); ∃ (h' : loc) tv',
+        cur ↦ tv' ∗ is_tree (td_right (Node rk l x r) k acc).1 tv' ∗ ref_k ↦ #k
+      ∗ accl ↦ #h' ∗ h' ↦ tv' ∗ is_ctx (td_right (Node rk l x r) k acc).2 accv h' }}.
+Proof. iStep. wp_apply (heap_right_correct with "[-]"). exact H. all: wp_type. Qed.
+
 Lemma heap_left_correct (l r : tree) (rk k x : Z) (H : (x >= k)%Z) (acc : ctx) (cur accr ref_k : loc) (tv : val) (accv h : loc) :
     {{{ cur ↦ tv ∗ is_tree (Node rk l x r) tv ∗ ref_k ↦ #k
       ∗ accr ↦ #h ∗ is_ctx acc accv h ∗ h ↦ tv }}}
@@ -224,7 +239,7 @@ Lemma heap_left_correct (l r : tree) (rk k x : Z) (H : (x >= k)%Z) (acc : ctx) (
           #accr <- (✲#cur) +ₗ #1%nat;;
           #cur <- (✲#cur)〚1〛
         } until: ((✲#cur == NULL) || ((✲#cur)〚2〛< (✲ #ref_k)))
-    {{{ v, RET v; ∃ (h' : loc) tv',
+    {{{ v, RET v; ∃ (h' : loc) tv', ⌜v = #()⌝ ∗
         cur ↦ tv' ∗ is_tree (td_left (Node rk l x r) k acc).1 tv' ∗ ref_k ↦ #k
       ∗ accr ↦ #h' ∗ h' ↦ tv' ∗ is_ctx (td_left (Node rk l x r) k acc).2 accv h' }}}.
 Proof.
@@ -255,6 +270,18 @@ Proof.
     + case_bool_decide. lia. done.
 Qed.
 
+Global Instance heap_left_correct_instance (t l r : tree) (rk k x : Z) (H : (x >= k)%Z) (acc : ctx) (cur accr ref_k : loc) (tv : val) (accv h : loc) :
+    SPEC {{ cur ↦ tv ∗ is_tree (Node rk l x r) tv ∗ ref_k ↦ #k
+      ∗ accr ↦ #h ∗ is_ctx acc accv h ∗ h ↦ tv }}
+        (repeat: {
+          #accr <- (✲#cur) +ₗ #1%nat;;
+          #cur <- (✲#cur)〚1〛
+        } until: ((✲#cur == NULL) || ((✲#cur)〚2〛< (✲ #ref_k))))%E
+    {{ RET #(); ∃ (h' : loc) tv',
+        cur ↦ tv' ∗ is_tree (td_left (Node rk l x r) k acc).1 tv' ∗ ref_k ↦ #k
+      ∗ accr ↦ #h' ∗ h' ↦ tv' ∗ is_ctx (td_left (Node rk l x r) k acc).2 accv h' }}.
+Proof. iStep. wp_apply (heap_left_correct with "[-]"). exact H. all: wp_type. Qed.
+
 Lemma heap_unzip_correct (t : tree) (rk k : Z) (cur x px ref_k : loc) (tv : val) :
     {{{ cur ↦ tv ∗ is_tree t tv ∗ ref_k ↦ #k
       ∗ x ↦ #px ∗ px ↦∗ [ #rk; tv; #k; tv ] }}}
@@ -272,10 +299,7 @@ Proof.
       ∗ ⌜td_unzip t k Hole Hole = td_unzip t' k accl accr⌝)%I.
   - iModIntro. iIntros "H". iDestruct "H" as (t' curv accl accr lhole' rhole' lholev rholev) "[Hx [Hx0 [Hx2 [Hcur [Ht' [Hk [Hlhole [Hlhole' [Haccl [Hrhole [Hrhole' [Haccr ->]]]]]]]]]]]]".
     wp_load. destruct t' as [|rk'' l'' x'' r''].
-    + iDestruct "Ht'" as %->. wp_pures. wp_quit_loop. wp_heap.
-      iPoseProof (tree_of_ctx accl Leaf (px +ₗ 1%nat) lhole' NULL with "[Haccl Hlhole']") as "[%l' [? Haccl]]". { wp_type. }
-      iPoseProof (tree_of_ctx accr Leaf (px +ₗ 3%nat) rhole' NULL with "[Haccr Hrhole']") as "[%r' [? Haccr]]". { wp_type. }
-      iExists px, l', r'. simp td_unzip. fold is_tree. unfold array. wp_type.
+    + iDestruct "Ht'" as %->. wp_type. unfold array. wp_type.
     + iDestruct "Ht'" as (pt lt rt) "[-> [Hpt [Hlt Hrt]]]". wp_pures.
       wp_enter_loop. wp_heap. case_bool_decide.
       { wp_pures. wp_load. wp_load. wp_store.

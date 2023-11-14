@@ -62,16 +62,16 @@ Definition while : val :=
       #()
     }.
 Notation "'while:' ( cnd ) { e }" := (while (λ: <>, cnd)%E (λ: <>, e)%E) : expr_scope. 
-Notation "'while:' ( cnd ) { e }" := (while (λ: <>, cnd)%V (λ: <>, e)%V) : var_scope.
+Notation "'while:' ( cnd ) { e }" := (while (λ: <>, cnd)%V (λ: <>, e)%V) : val_scope.
 Notation "'repeat:' { e } 'until:' ( cnd )" := (Lam BAnon (while (λ: <>, ~ cnd)%E (λ: <>, e)%E) e%E) : expr_scope.
-Notation "'repeat:' { e } 'until:' ( cnd )" := (Lam BAnon (while (λ: <>, ~ cnd)%V (λ: <>, e)%V) e%V) : var_scope.
+Notation "'repeat:' { e } 'until:' ( cnd )" := (Lam BAnon (while (λ: <>, ~ cnd)%V (λ: <>, e)%V) e%V) : val_scope.
 
 Notation "'while:' ( 'true' ) { e }" :=
    (Lam "continue" (while (λ: <>, Load "continue")%E (λ: <>, e)%E)
      (Alloc #true)) : expr_scope. 
 Notation "'while:' ( 'true' ) { e }" :=
    (Lam "continue" (while (λ: <>, Load "continue")%V (λ: <>, e)%V)
-     (Alloc #true)) : var_scope. 
+     (Alloc #true)) : val_scope. 
 
 Notation "'fun:' ( a ) { e }" :=
   (LamV (ident_to_string! a)%binder
@@ -163,6 +163,12 @@ Local Set Default Proof Using "Type*".
 Context `{!heapGS Σ}.
 
 #[export]
+Instance loc_add_zero_hint (p : loc) (v : val) :
+HINT (p +ₗ 0) ↦ v ✱ [- ; ⌜true⌝ ]
+  ⊫ [id]; p ↦ v ✱ [ ⌜true⌝ ].
+Proof. rewrite (Loc.add_0). iSteps. Qed.
+
+#[export]
 Instance is_continue_stop_hint t :
 HINT ε₁ ✱ [- ; ⌜t = Stop⌝] ⊫ [id]; is_continue t #false ✱ [⌜t = Stop⌝].
 Proof. iSteps. Qed.
@@ -236,16 +242,16 @@ Proof.
 Qed.
 
 (* See https://gitlab.mpi-sws.org/iris/c/-/blob/master/theories/c_translation/monad.v *)
-Lemma wp_while R Φ c e :
-  WP (while (λ: <>, c)%V (λ: <>, e)%V) @ R {{ Φ }} -∗
-  WP (while (λ: <>, c)%E (λ: <>, e)%E) @ R {{ Φ }}.
+Lemma wp_while Φ c e :
+  WP (while (λ: <>, c)%V (λ: <>, e)%V) {{ Φ }} -∗
+  WP (while (λ: <>, c)%E (λ: <>, e)%E) {{ Φ }}.
 Proof. iIntros "H". wp_pures. iAssumption. Qed.
 
-Lemma wp_whileV R Φ c e :
-  ▷ WP c @ R {{ v,
-      ⌜v = #true⌝ ∧ (WP e @ R {{ _, (WP while (λ: <>, c)%V (λ: <>, e)%V @ R {{ Φ }})}})
+Lemma wp_whileV Φ c e :
+  ▷ WP c {{ v,
+      ⌜v = #true⌝ ∧ (WP e {{ _, (WP while (λ: <>, c)%V (λ: <>, e)%V {{ Φ }})}})
     ∨ ⌜v = #false⌝ ∧ (Φ #()) }} -∗
-  WP while (λ: <>, c)%V (λ: <>, e)%V @ R {{ Φ }}.
+  WP while (λ: <>, c)%V (λ: <>, e)%V {{ Φ }}.
 Proof.
 iIntros "H". wp_lam. wp_pures. wp_apply (wp_wand with "H"). iIntros (v) "H".
 iDestruct "H" as "[[-> H]|[-> H]]".
@@ -253,11 +259,11 @@ iDestruct "H" as "[[-> H]|[-> H]]".
  - wp_if. iModIntro. iAssumption. 
 Qed.
 
-Lemma wp_whileV_inv (I : iProp Σ) R (Φ : val -> iProp Σ) c e :
-  □ (I -∗ WP c @ R {{ v, (⌜v = #false⌝ ∧ (Φ #())) ∨
-                         (⌜v = #true⌝ ∧ WP e @ R {{ _, I }}) }}) -∗
+Lemma wp_whileV_inv (I : iProp Σ) (Φ : val -> iProp Σ) c e :
+  □ (I -∗ WP c {{ v, (⌜v = #false⌝ ∧ (Φ #())) ∨
+                         (⌜v = #true⌝ ∧ WP e {{ _, I }}) }}) -∗
   I -∗
-  WP while (λ: <>, c)%V (λ: <>, e)%V @ R {{ Φ }}.
+  WP while (λ: <>, c)%V (λ: <>, e)%V {{ Φ }}.
 Proof.
 iIntros "#Hinv HI". iLöb as "IH". iApply wp_whileV. iNext.
 iSpecialize ("Hinv" with "HI"). iApply (wp_wand with "Hinv").
@@ -266,11 +272,11 @@ iLeft. iSplit; first done. iApply (wp_wand with "H").
 iIntros (_) "HI". iApply "IH". iAssumption.
 Qed.
 
-Lemma wp_while_inv (I : iProp Σ) R (Φ : val -> iProp Σ) c e :
-  □ (I -∗ WP c @ R {{ v, (⌜v = #false⌝ ∧ (Φ #())) ∨
-                         (⌜v = #true⌝ ∧ (WP e @ R {{ _, I }})) }}) -∗
+Lemma wp_while_inv (I : iProp Σ) (Φ : val -> iProp Σ) c e :
+  □ (I -∗ WP c {{ v, (⌜v = #false⌝ ∧ (Φ #())) ∨
+                         (⌜v = #true⌝ ∧ (WP e {{ _, I }})) }}) -∗
   I -∗
-  WP while (λ: <>, c)%E (λ: <>, e)%E @ R {{ Φ }}.
+  WP while (λ: <>, c)%E (λ: <>, e)%E {{ Φ }}.
 Proof.
 iIntros "#Hinv HI". iApply wp_while. by iApply (wp_whileV_inv with "Hinv HI").
 Qed.

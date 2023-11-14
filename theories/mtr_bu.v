@@ -82,15 +82,12 @@ Proof.
             tree ↦ treev ∗ is_root_tree t' treev
             ∗ zipper ↦ zipperv ∗ is_zipper z' zipperv
             ∗ ⌜move_to_root z t = move_to_root z' t'⌝)%I.
-  - iSteps.
+  - wp_type.
   - iDestruct "H" as (t' z' treev zipperv) "[? [Ht' [? [Hz ->]]]]".
     unfold rotate_right. unfold rotate_left.
-    destruct t' as [l x r]. iDestruct "Ht'" as (p l' r') "[-> [? [? ?]]]".
-    destruct z' as [|zl zx zr|zl zx zr].
-    + iDestruct "Hz" as %->. wp_heap. wp_type.
-    + iDestruct "Hz" as (zp z'' zr') "[-> [? [? ?]]]". wp_heap. wp_type.
-    + iDestruct "Hz" as (zp zl' z'') "[-> [? [? ?]]]". wp_heap. wp_type.
-  - iSteps.
+    destruct t'. iDestruct "Ht'" as (p l' r') "[-> [? [? ?]]]".
+    destruct z'; iDecompose "Hz"; wp_type.
+  - wp_type.
 Qed.
 
 Lemma heap_bu_insert_correct (i : Z) (tv : val) (t : tree) :
@@ -110,15 +107,9 @@ Proof.
   - iDestruct "H" as (t' z' treev zipperv) "[? [Ht [? [? [Hz ->]]]]]". wp_heap.
     wp_apply (heap_rebuild_correct z' t' zipper tree zipperv treev with "[-]").
       { wp_type. }
-    iFrame. iIntros (v) "H".  destruct (move_to_root z' t').
-    iDestruct "H" as (p l' r') "[-> [? ?]]". wp_type.
+    iSteps as (?) "H". destruct (move_to_root z' t'). iDecompose "H". wp_type.
   - iDestruct "H" as (t' z' treev zipperv) "[? [Ht [? [? [Hz ->]]]]]".
-    unfold bu_insert_go at 1. destruct t' as [|l x r].
-    + iDestruct "Ht" as %->. wp_heap. wp_type.
-    + iDestruct "Ht" as (p l' r') "[-> [? [? ?]]]". wp_heap.
-      case_bool_decide; wp_heap.
-      { wp_type. }
-      { case_bool_decide; wp_heap; wp_type. }
+    unfold bu_insert_go at 1. destruct t'; iDecompose "Ht"; wp_type.
   - wp_type.
 Qed.
 

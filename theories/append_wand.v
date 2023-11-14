@@ -50,7 +50,7 @@ Lemma heap_append_correct (xsv : val) (xs : list Z) (ysv : val) (ys : list Z) :
     {{{ v, RET v; is_list (append xs ys (fun x => x)) v }}}.
 Proof.
   wp_begin "[Hxs Hys]"; lxs, lys. destruct xs.
-  - iDestruct "Hxs" as %->. wp_heap. wp_type.
+  - iDecompose "Hxs". wp_type.
   - iDestruct "Hxs" as (p v') "[-> [Hp Hxs]]". wp_load.
     wp_pures. wp_load. wp_var curr. wp_while
         (∃ xs' xsv acc' (p : loc) (currp : loc),
@@ -60,19 +60,16 @@ Proof.
             ⌜append (z :: xs) ys (fun x => x) = append xs' ys acc'⌝)%I.
     + iModIntro. iIntros "H". iDestruct "H" as (xs' xsv acc p' currp) "H".
       iDestruct "H" as "[? [Hc [? [Hys [? [? [Hxs ->]]]]]]]". destruct xs' as [| x xx].
-      { iDestruct "Hxs" as %->. wp_heap. wp_quit_loop. wp_heap.
-        unfold append. wp_type. }
+      { iDecompose "Hxs". wp_type. }
       { iDestruct "Hxs" as (p'' v'') "[-> [Hp Hxs]]".
         wp_heap. wp_enter_loop. wp_heap. iModIntro.
         iExists xx, _, (compose acc (fun ys' => x :: ys')), p', (p'' +ₗ 1%nat).
         unfold array at 1. iDecompose "Hp". iFrame. iSplitL.
-        - iSteps. unfold array. simpl. iSteps.
+        - iSteps. unfold array. iSteps.
         - done. }
     + iExists xs, _, (fun ys' => z :: ys'), p, (p +ₗ 1%nat).
-      iFrame. unfold array. iDecompose "Hp". iSplitR "H11".
-      { iIntros (l currv) "[H1 H2]". iExists _, currv.
-        iFrame. rewrite (Loc.add_0). iSteps. }
-      { iSteps. }
+      iFrame. unfold array. iDecompose "Hp". iFrame.
+      iSplitL. unfold array. iSteps. iSteps. 
 Qed.
 
 End proof.
