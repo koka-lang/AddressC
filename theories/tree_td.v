@@ -23,7 +23,7 @@ Proof. iSteps. Qed.
 Instance is_tree_node_hint (p : loc) (x : Z) (l_r l_l : val) t :
 HINT ε₁ ✱ [ l r ; (p +ₗ 0) ↦ l_l ∗ (p +ₗ 1) ↦ #x ∗ (p +ₗ 2) ↦ l_r ∗ is_tree l l_l ∗ is_tree r l_r ∗ ⌜t = Node l x r⌝]
   ⊫ [id]; is_tree t #p ✱ [⌜t = Node l x r⌝].
-Proof. unfold is_tree, array. simpl. iSteps. Qed.
+Proof. iSteps. Qed.
 
 (* We want to figure out if a tree is a Leaf or a Node from the "t != NULL" check.
    To achieve this, Ike Mulder wrote this typeclass inference code. *)
@@ -119,12 +119,12 @@ Lemma tree_of_ctx (z : ctx) (t : tree) (zv : loc) (hv : loc) (tv : val) :
 Proof.
   iIntros "[Hz [Hhv Ht]]". iInduction z as [|z x r|l x z] "IH" forall (zv hv t).
   - iDecompose "Hz". iSteps.
-  - iDecompose "Hz" as (? ? ?) "H1 H2 H3 H4". iExists #x. iFrame.
+  - iDecompose "Hz" as (? ? ?) "H1 H2 H3 H4". iExists #x. iSteps.
     iPoseProof ("IH" $! (Loc.add x 0) hv t with "H3 Hhv Ht") as "[%l' [H1' H2']]".
-    iExists x, l', x0. unfold array, harray. iSteps.
-  - iDecompose "Hz" as (? ? ?) "H1 H2 H3 H4". iExists #x0. iFrame.
+    iExists l', x0. unfold array, harray. iSteps.
+  - iDecompose "Hz" as (? ? ?) "H1 H2 H3 H4". iExists #x0. iSteps.
     iPoseProof ("IH" $! (Loc.add x0 2) hv t with "H3 Hhv Ht") as "[%r' [H1' H2']]".
-    iExists x0, x1, r'. unfold array, harray. iSteps.
+    iExists x1, r'. unfold array, harray. iSteps.
 Qed.
 
 Lemma ctx0_of_ctx (z1 : ctx) (z2 : ctx) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2 : loc) :
@@ -132,9 +132,9 @@ Lemma ctx0_of_ctx (z1 : ctx) (z2 : ctx) (zv1 : loc) (hv1 : loc) (zv2 : loc) (hv2
 Proof.
   iIntros "[Hz [Hhv Ht]]". iInduction z1 as [|z x r|l x z] "IH" forall (zv1 hv1 z2 zv2 hv2).
   - iDecompose "Hz". iExists zv2. iFrame.
-  - iDecompose "Hz". iExists x. iFrame. iExists x0. iFrame.
+  - iDecompose "Hz". iExists x. iFrame.
     iApply (ctx_of_ctx0). iSteps. repeat rewrite (Loc.add_0). iSteps.
-  - iDecompose "Hz". iExists x0. iFrame. iExists x1. iFrame.
+  - iDecompose "Hz". iExists x0. iFrame.
     iApply (ctx_of_ctx0). iSteps. repeat rewrite (Loc.add_0). iSteps.
 Qed.
 

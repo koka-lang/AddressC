@@ -12,6 +12,12 @@
 -arg -w -arg -ambiguous-paths
 -arg -native-compiler -arg no
 
+# Disable notation warnings for our C-style syntax
+-arg -w -arg -non-reversible-notation
+-arg -w -arg -notation-bound-to-variable
+
+# TODO: New warning which fires for our C-style variable hack
+-arg -w -arg -ltac2-missing-notation-var
 
 theories/idents.v
 theories/lang.v

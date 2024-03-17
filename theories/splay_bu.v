@@ -248,9 +248,9 @@ Proof.
     destruct t' as [|l x r].
     + iDecompose "Ht". wp_type.
     + iDestruct "Ht" as (? ? ?) "[-> [? [Hl Hr]]]". wp_heap.
-      unfold bu_insert_go at 1. case_bool_decide; wp_heap.
+      unfold bu_insert_go at 1. if_decide; wp_heap.
       { wp_type. }
-      { case_bool_decide; wp_heap.
+      { if_decide; wp_heap.
         - destruct l; iDecompose "Hl"; wp_heap; wp_type.
         - destruct r; iDecompose "Hr"; wp_heap; wp_type. }
   - wp_type.

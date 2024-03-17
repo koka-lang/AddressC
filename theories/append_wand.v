@@ -65,11 +65,11 @@ Proof.
         wp_heap. wp_enter_loop. wp_heap. iModIntro.
         iExists xx, _, (compose acc (fun ys' => x :: ys')), p', (p'' +ₗ 1%nat).
         unfold array at 1. iDecompose "Hp". iFrame. iSplitL.
-        - iSteps. unfold array. iSteps.
+        - iSteps.
         - done. }
     + iExists xs, _, (fun ys' => z :: ys'), p, (p +ₗ 1%nat).
-      iFrame. unfold array. iDecompose "Hp". iFrame.
-      iSplitL. 1: unfold array; iSteps. iSteps. 
+      fold is_list. unfold array. iFrame.
+      iDecompose "Hp" as "p0 p1". iSplitL "p0"; iSteps.
 Qed.
 
 End proof.

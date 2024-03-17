@@ -42,8 +42,7 @@ End Private.
 
 Notation "'var:' x := e1 'in' e2" :=
   (Lam (ident_to_string! x)%binder ((fun (x : expr) => e2%E) (Load (ident_to_string! x)%binder)) (Alloc e1%E))
-  (at level 100, x at level 100, e1, e2 at level 200, right associativity,
-   format "'[' 'var:'  x  :=  '[' e1 ']'  'in'  '/' e2 ']'") : expr_scope.
+  (at level 100, x at level 100, e1, e2 at level 200, right associativity) : expr_scope.
 
 Notation "'var:' x := e1 'in' e2" :=
   (Lam x%binder e2%V (Alloc e1%V))
@@ -78,8 +77,7 @@ Notation "'fun:' ( a ) { e }" :=
     ((fun a =>
       e%E)
     (Load (ident_to_string! a)%binder)))
-  (at level 200, a at level 1, e at level 200,
-   format "'[' 'fun:' ( a ) '/  ' { e } ']'").
+  (at level 200, a at level 1, e at level 200).
 
 Notation "'fun:' ( a , b ) { e }" :=
   (LamV (ident_to_string! a)%binder
@@ -89,8 +87,7 @@ Notation "'fun:' ( a , b ) { e }" :=
           e%E)
         (Load (ident_to_string! b)%binder))))
     (Load (ident_to_string! a)%binder)))
-  (at level 200, a, b at level 1, e at level 200,
-   format "'[' 'fun:' ( a , b ) '/  ' { e } ']'").
+  (at level 200, a, b at level 1, e at level 200).
 
 Notation "'fun:' ( a , b , c ) { e }" :=
   (LamV (ident_to_string! a)%binder
@@ -103,8 +100,7 @@ Notation "'fun:' ( a , b , c ) { e }" :=
             (Load (ident_to_string! c)%binder))))
         (Load (ident_to_string! b)%binder))))
     (Load (ident_to_string! a)%binder)))
-  (at level 200, a, b, c at level 1, e at level 200,
-   format "'[' 'fun:' ( a , b , c ) '/  ' { e } ']'").
+  (at level 200, a, b, c at level 1, e at level 200).
 
 Notation "'fun:' ( a , b , c , d ) { e }" :=
   (LamV (ident_to_string! a)%binder
@@ -120,8 +116,7 @@ Notation "'fun:' ( a , b , c , d ) { e }" :=
             (Load (ident_to_string! c)%binder))))
         (Load (ident_to_string! b)%binder))))
     (Load (ident_to_string! a)%binder)))
-  (at level 200, a, b, c, d at level 1, e at level 200,
-   format "'[' 'fun:' ( a , b , c , d ) '/  ' { e } ']'").
+  (at level 200, a, b, c, d at level 1, e at level 200).
 
 Notation "'fun:' ( a , b , c , d , e ) { e2 }" :=
   (LamV (ident_to_string! a)%binder
@@ -140,8 +135,7 @@ Notation "'fun:' ( a , b , c , d , e ) { e2 }" :=
             (Load (ident_to_string! c)%binder))))
         (Load (ident_to_string! b)%binder))))
     (Load (ident_to_string! a)%binder)))
-  (at level 200, a, b, c, d, e at level 1, e2 at level 200,
-   format "'[' 'fun:' ( a , b , c , d , e ) '/  ' { e2 } ']'").
+  (at level 200, a, b, c, d, e at level 1, e2 at level 200).
 
 Notation "'ret:' e" := e%E (at level 20) : expr_scope. 
 
@@ -285,39 +279,56 @@ End proofs.
 
 (* --------- Tactics ----------- *)
 
+(* We wan to call iSplitL using a selection pattern which includes a fresh ident,
+   but unfortunately the current implementation does not support this.
+   Thus, we duplicate the iSplitL tactic here: *)
+Tactic Notation "ISplitL" constr(Hs) :=
+  iStartProof;
+  let Δ := iGetCtx in
+  eapply tac_sep_split with Left Hs _ _; (* (js:=Hs) *)
+    [tc_solve ||
+     let P := match goal with |- FromSep ?P _ _ => P end in
+     fail "iSplitL:" P "not a separating conjunction"
+    |pm_reduce;
+     lazymatch goal with
+     | |- False => let Hs := iMissingHypsCore Δ Hs in
+                 fail "iSplitL: hypotheses" Hs "not found"
+     | _ => split; [(* subgoal 1 *)|(* subgoal 2 *)]
+     end].
+
 Tactic Notation "wp_begin" constr(x1) :=
   let phi := fresh "Φ" in
   let Hphi := iFresh in
   iIntros (phi); iIntros x1; iIntros [IIdent Hphi];
-  wp_rec; wp_apply wp_wand_l; iFrame; repeat wp_lam; clear phi.
+  wp_rec; wp_apply wp_wand_l; ISplitL [Hphi]; first iFrame; repeat wp_lam; clear phi.
 
 Tactic Notation "wp_begin" constr(x1) ";" ident(x2) :=
   let phi := fresh "Φ" in
   let Hphi := iFresh in
   iIntros (phi); iIntros x1; iIntros [IIdent Hphi];
   wp_alloc x2;
-  wp_rec; wp_apply wp_wand_l; iFrame; repeat wp_lam; clear phi.
+  wp_rec; wp_apply wp_wand_l; ISplitL [Hphi]; first iFrame; repeat wp_lam; clear phi.
 
 Tactic Notation "wp_begin" constr(x1) ";" ident(x2) "," ident(x3) :=
   let phi := fresh "Φ" in
   let Hphi := iFresh in
   iIntros (phi); iIntros x1; iIntros [IIdent Hphi];
   wp_alloc x3; wp_alloc x2;
-  wp_rec; wp_apply wp_wand_l; iFrame; repeat wp_lam; clear phi.
+  wp_rec; wp_apply wp_wand_l; ISplitL [Hphi]; first iFrame; repeat wp_lam; clear phi.
 
 Tactic Notation "wp_begin" constr(x1) ";" ident(x2) "," ident(x3) "," ident(x4) :=
   let phi := fresh "Φ" in
   let Hphi := iFresh in
   iIntros (phi); iIntros x1; iIntros [IIdent Hphi];
   wp_alloc x4; wp_alloc x3; wp_alloc x2;
-  wp_rec; wp_apply wp_wand_l; iFrame; repeat wp_lam; clear phi.
+  wp_rec; wp_apply wp_wand_l; ISplitL [Hphi]; first iFrame; repeat wp_lam; clear phi.
 
 Tactic Notation "wp_begin" constr(x1) ";" ident(x2) "," ident(x3) "," ident(x4) "," ident(x5) :=
   let phi := fresh "Φ" in
   let Hphi := iFresh in
   iIntros (phi); iIntros x1; iIntros [IIdent Hphi];
   wp_alloc x5; wp_alloc x4; wp_alloc x3; wp_alloc x2;
-  wp_rec; wp_apply wp_wand_l; iFrame; repeat wp_lam; clear phi.
+  wp_rec; wp_apply wp_wand_l; ISplitL [Hphi]; first iFrame; repeat wp_lam; clear phi.
 
 Tactic Notation "wp_var" ident(x) :=
   wp_alloc x; wp_let.
@@ -380,8 +391,14 @@ Tactic Notation "wp_heap" :=
         || wp_load_offset || wp_store_offset
         || let x := fresh in (wp_alloc x; try done) ).
 
+Tactic Notation "if_decide" :=
+  let H := fresh in case_bool_decide as H; try inversion H.
+
+Tactic Notation "invalid_case" :=
+  (subst; done) || lia.
+
 Tactic Notation "wp_type" :=
-  iSteps; try (repeat case_bool_decide; iSteps).
+  iSteps; try (repeat if_decide; try invalid_case; iSteps).
 
 Tactic Notation "wp_while" constr(Hinv) :=
   wp_apply (wp_while_inv Hinv).

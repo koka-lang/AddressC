@@ -8,7 +8,7 @@ All primitives come with a high degree of automation thanks to [Diaframe](https:
 used in particular to show correctness of various tree insertion 
 algorithms (see our [techreport][fiptree-tr]).
 
-[fiptree-tr]: https://www.microsoft.com/en-us/research/publication/a-functional-correspondence-between-top-down-and-bottom-up-tree-algorithms-fast-and-correct-fully-in-place-functions-with-first-class-constructor-contexts-and-zippers-tr/
+[fiptree-tr]: https://www.microsoft.com/en-us/research/publication/fiptree-tr/
 
 AddressC is especially powerful for imperative algorithms which arise naturally from a functional version.
 As an example, take the `reverse` function:
@@ -95,11 +95,11 @@ to obtain AddressC code which corresponds closely to the pseudo-code presented i
 original papers. To learn more about this work,
 please refer [to our paper][fiptree-tr]:
 ```
-@TechReport{Lorenzen:correspondence,
+@TechReport{Lorenzen:bst-essence,
   author = {Lorenzen, Anton and Leijen, Daan and Swierstra, Wouter and Lindley, Sam},
-  title = {A Functional Correspondence between Top-down and Bottom-up Tree Algorithms},
+  title = {The Functional Essence of Imperative Binary Search Trees},
   year = 2023,
-  month = Jul,
+  month = Dec,
   institution = {Microsoft Research},
   number = {MSR-TR-2023-28}
 }
@@ -110,15 +110,15 @@ please refer [to our paper][fiptree-tr]:
 The Coq code is known to compile with:
 
 ```
-coq                         8.17.0                     The Coq Proof Assistant
-coq-core                    8.17.0                     The Coq Proof Assistant -- Core Binaries and Tools
-coq-diaframe                dev.2023-06-15.0.1c3b5549  Diaframe: Automation for Iris
-coq-diaframe-heap-lang      dev.2023-06-15.0.1c3b5549  Diaframe: Automation for Iris's Heap Lang
-coq-equations               1.3+8.17                   A function definition package for Coq
-coq-iris                    dev.2023-06-14.0.f0e415b6  A Higher-Order Concurrent Separation Logic Framework with support for interactive proofs
-coq-iris-heap-lang          dev.2023-06-14.0.f0e415b6  The canonical example language for Iris
-coq-stdlib                  8.17.0                     The Coq Proof Assistant -- Standard Library
-coq-stdpp                   dev.2023-06-01.0.d1254759  An extended "Standard Library" for Coq
+coq                    8.19.1                    The Coq Proof Assistant
+coq-core               8.19.1                    The Coq Proof Assistant -- Core Binaries and Tools
+coq-diaframe           dev.2024-02-21.0.9c606e4f Diaframe: Automation for Iris
+coq-diaframe-heap-lang dev.2024-02-21.0.9c606e4f Diaframe: Automation for Iris's Heap Lang
+coq-equations          1.3+8.19                  A function definition package for Coq
+coq-iris               dev.2024-02-16.1.06f499e0 A Higher-Order Concurrent Separation Logic Framework with support for interactive proofs
+coq-iris-heap-lang     dev.2024-02-16.1.06f499e0 The canonical example language for Iris
+coq-stdlib             8.19.1                    The Coq Proof Assistant -- Standard Library
+coq-stdpp              dev.2024-02-09.0.cafd7113 An extended "Standard Library" for Coq
 ```
 
 ## Compilation

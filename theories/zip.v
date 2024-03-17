@@ -30,8 +30,7 @@ Lemma heap_is_higher_rank_correct `{!heapGS Σ} (rk1 rk2 x1 x2 : Z) :
     heap_is_higher_rank #rk1 #rk2 #x1 #x2
   {{{ v, RET v; ∃ (b : bool), ⌜v = #b⌝ ∗ ⌜b = is_higher_rank rk1 rk2 x1 x2⌝ }}}.
 Proof.
-  wp_begin "H". unfold is_higher_rank.
-  repeat case_bool_decide; iSteps.
+  wp_begin "H". unfold is_higher_rank. repeat case_bool_decide; iSteps.
 Qed.
 
 (* Recursive *)

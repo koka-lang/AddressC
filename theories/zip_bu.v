@@ -230,7 +230,7 @@ Proof.
       iIntros (v) "[%b [Hv Hb]]". unfold bu_insert_go.
       destruct b; iDestruct "Hv" as %->; iDestruct "Hb" as %<-.
       { wp_type. }
-      { wp_heap. case_bool_decide.
+      { wp_heap. if_decide.
         - wp_type.
         - wp_pures. wp_load. wp_alloc Hk as "Hk'". wp_load. wp_alloc Ht as "Ht'".
           wp_apply (heap_unzip_correct (Node rk l x r) k with "[Hp Hl Hr Hk' Ht']").
