@@ -69,7 +69,7 @@ Proof.
         - done. }
     + iExists xs, _, (fun ys' => z :: ys'), p, (p +ₗ 1%nat).
       iFrame. unfold array. iDecompose "Hp". iFrame.
-      iSplitL. unfold array. iSteps. iSteps. 
+      iSplitL. 1: unfold array; iSteps. iSteps. 
 Qed.
 
 End proof.
