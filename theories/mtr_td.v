@@ -74,8 +74,8 @@ Proof.
     (∃ accl accr t' (left_hole right_hole : loc) left_hole_v right_hole_v root_v node_v,
             node ↦ node_v ∗ is_tree t' node_v
             ∗ root ↦ root_v ∗ name ↦ #k
-            ∗ left_hook  ↦ #left_hole  ∗ (left_hole  ↦ left_hole_v)  ∗ is_ctx accl left_dummy  left_hole
-            ∗ right_hook ↦ #right_hole ∗ (right_hole ↦ right_hole_v) ∗ is_ctx accr right_dummy right_hole
+            ∗ left_hook  ↦ #left_hole  ∗ left_hole  ↦ left_hole_v  ∗ is_ctx accl left_dummy  left_hole
+            ∗ right_hook ↦ #right_hole ∗ right_hole ↦ right_hole_v ∗ is_ctx accr right_dummy right_hole
             ∗ ⌜mtr_insert_td t k = mtr_down_td t' k accl accr⌝)%I.
   - iDecompose "H". iSteps.                               (* The claim follows once the while-loop ends *)
   - iDecompose "H". rewrite H1.                                     (* Rewrite one functional tail-call *)

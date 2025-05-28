@@ -1,110 +1,104 @@
-(* Copyright (c) 2023 Microsoft Research, Anton Lorenzen *)
+(* Copyright (c) 2025 Microsoft Research, Anton Lorenzen *)
 
 From fip_iris Require Import lang tree tree_td splay.
 
 Definition rotate_right : val :=
-  fun: ( tree' ) {
-    var: l := tree'->left in
-    tree'->left = l->right;;
-    l->right = tree';;
-    tree' = l
+  fun: ( t ) {
+    var: temp := t->left in
+    t->left = temp->right;;
+    temp->right = t;;
+    t = temp
   }.
 
 Definition rotate_left : val :=
-  fun: ( tree' ) {
-    var: r := tree'->right in
-    tree'->right = r->left;;
-    r->left = tree';;
-    tree' = r
+  fun: ( t ) {
+    var: temp := t->right in
+    t->right = temp->left;;
+    temp->left = t;;
+    t = temp
   }.
 
-Definition link_left : val :=
-  fun: ( tree', lhole ) {
-    ✲lhole = tree';;
-    lhole = &(tree'->right);;
-    tree' = tree'->right
+Definition link_left := fun: ( t, l ) {
+    l->right = t;; l = t;; t = t->right
   }.
 
 Definition link_right : val :=
-  fun: ( tree', rhole ) {
-    ✲rhole = tree';;
-    rhole = &(tree'->left);;
-    tree' = tree'->left
+  fun: ( t, r ) {
+    r->left = t;;
+    r = t;;
+    t = t->left
   }.
 
 Definition assemble : val :=
-  fun: ( tree', lhole, rhole, lctx, rctx ) {
-    ✲lhole = tree'->left;;
-    ✲rhole = tree'->right;;
-    tree'->left = lctx;;
-    tree'->right = rctx
+  fun: ( t, null, l, r ) {
+    l->right = t->left;;
+    r->left = t->right;;
+    t->left = null->right;;
+    t->right = null->left
   }.
 
-Definition heap_td_insert : val :=
-  fun: ( i, tree' ) {
-    var: lctx := NULL in
-    var: rctx := NULL in
-    var: lhole := &lctx in
-    var: rhole := &rctx in
+Definition top_down_splay := fun: ( i, t ) {
+    var: null := AllocN #3 NULL in
+    var: l := null in var: r := null in
     while: ( true ) {
-      if: (tree' != NULL) {
-        if: ( i == tree'->key) {
-          break
-        } else {
-          if: ( i < tree'->key) {
-            if: (tree'->left != NULL) {
-              if: ( i == tree'->left->key) {
-                link_right (&tree') (&rhole);;
-                break
-              } else {
-                if: ( i < tree'->left->key) {
-                  rotate_right (&tree');;
-                  link_right (&tree') (&rhole)
-                } else {
-                  link_right (&tree') (&rhole);;
-                  link_left (&tree') (&lhole)
-                }
-              }
+      if: (t != NULL) {
+        if: ( i < t->item ) {
+          if: (t->left != NULL) {
+            if: ( i > t->left->item ) {
+              link_right (&t) (&r);;
+              link_left (&t) (&l)
             } else {
-              var: l := tree'->left in
-              l = AllocN #3 NULL;;
-              l->key = i;;
-              l->right = tree';;
-              tree' = l;;
-              break
+              if: ( i < t->left->item) {
+                rotate_right (&t);;
+                link_right (&t) (&r)
+              } else {
+                link_right (&t) (&r);;
+                break
+              }
             }
           } else {
-            if: (tree'->right != NULL) {
-              if: ( i == tree'->right->key) {
-                link_left (&tree') (&lhole);;
+            var: l := t->left in
+            l = AllocN #3 NULL;;
+            l->item = i;;
+            l->right = t;;
+            t = l;;
+            break
+          }
+        } else {
+          if: ( i == t->item) {
+            break
+          } else {
+            if: (t->right != NULL) {
+              if: ( i == t->right->item) {
+                link_left (&t) (&l);;
                 break
               } else {
-                if: ( i > tree'->right->key) {
-                  rotate_left (&tree');;
-                  link_left (&tree') (&lhole)
+                if: ( i > t->right->item) {
+                  rotate_left (&t);;
+                  link_left (&t) (&l)
                 } else {
-                  link_left (&tree') (&lhole);;
-                  link_right (&tree') (&rhole)
+                  link_left (&t) (&l);;
+                  link_right (&t) (&r)
                 }
               }
             } else {
-              var: r := tree'->right in
+              var: r := t->right in
               r = AllocN #3 NULL;;
-              r->left = tree';;
-              r->key = i;;
-              tree' = r;;
+              r->left = t;;
+              r->item = i;;
+              t = r;;
               break
             }
           }
         }
       } else {
-        tree' = AllocN #3 NULL;;
-        tree'->key = i;;
+        t = AllocN #3 NULL;;
+        t->item = i;;
         break
       }
     };;
-    assemble (&tree') (&lhole) (&rhole) (&lctx) (&rctx);;
-    ret: tree'
+    assemble (&t) (&null) (&l) (&r);;
+    ret: t
   }.
 
 Section proof.
@@ -112,39 +106,43 @@ Section proof.
 Local Set Default Proof Using "Type*".
 Context `{!heapGS Σ}.
 
-Lemma heap_td_insert_correct (i : Z) (tv : val) (t : tree) :
-    {{{ is_tree t tv }}}
-    heap_td_insert (ref #i) (ref tv)
-    {{{ v, RET v; is_tree (td_insert i t) v }}}.
+Lemma heap_td_insert_correct (i : Z) (tv : val) (t' : tree) :
+    {{{ is_tree t' tv }}}
+    top_down_splay (ref #i) (ref tv)
+    {{{ v, RET v; is_tree (td_insert i t') v }}}.
 Proof.
-  wp_begin "Ht"; ref_i, tree.
-  wp_alloc lctx as "Hlctx". wp_let. wp_alloc rctx as "Hrctx". wp_let.
-  wp_var lhole. wp_var rhole. wp_while_true "H"
-    (∃ lz' l (x : Z) rz' r treev (lhv rhv : loc) lhvv rhvv,
-            tree ↦ treev ∗ is_tree (Node l x r) treev ∗ ref_i ↦ #i
-            ∗ lhole ↦ #lhv ∗ lhv ↦ lhvv ∗ is_ctx lz' lctx lhv
-            ∗ rhole ↦ #rhv ∗ rhv ↦ rhvv ∗ is_ctx rz' rctx rhv
-            ∗ ⌜td_insert_go i Hole Hole t = (lz', Root l x r, rz')⌝)%I
-    (∃ lz' rz' t' (lhv rhv : loc) lhvv rhvv treev,
-            tree ↦ treev ∗ is_tree t' treev ∗ ref_i ↦ #i
-            ∗ lhole ↦ #lhv ∗ lhv ↦ lhvv ∗ is_ctx lz' lctx lhv
-            ∗ rhole ↦ #rhv ∗ rhv ↦ rhvv ∗ is_ctx rz' rctx rhv
-            ∗ ⌜td_insert_go i Hole Hole t = td_insert_go i lz' rz' t'⌝)%I.
+  wp_begin "Ht"; ref_i, t.
+  wp_alloc nullc. { lia. } wp_var null. wp_load. wp_var l. wp_load. wp_var r.
+  wp_while_true "H"
+    (∃ lz' l' (x : Z) rz' r' tv (lhv rhv nullv : loc) lhvv rhvv,
+            t ↦ tv ∗ is_tree (Node l' x r') tv ∗ ref_i ↦ #i ∗ null ↦ #nullv
+            ∗ l ↦ #lhv ∗ (lhv +ₗ 2) ↦ lhvv ∗ is_ctx lz' (nullv +ₗ 2) (lhv +ₗ 2)
+            ∗ r ↦ #rhv ∗ (rhv +ₗ 0) ↦ rhvv ∗ is_ctx rz' (nullv +ₗ 0) (rhv +ₗ 0)
+            ∗ ⌜td_insert_go i Hole Hole t' = (lz', Root l' x r', rz')⌝)%I
+    (∃ lz' rz' t'' (lhv rhv nullv : loc) lhvv rhvv tv,
+            t ↦ tv ∗ is_tree t'' tv ∗ ref_i ↦ #i ∗ null ↦ #nullv
+            ∗ l ↦ #lhv ∗ (lhv +ₗ 2) ↦ lhvv ∗ is_ctx lz' (nullv +ₗ 2) (lhv +ₗ 2)
+            ∗ r ↦ #rhv ∗ (rhv +ₗ 0) ↦ rhvv ∗ is_ctx rz' (nullv +ₗ 0) (rhv +ₗ 0)
+            ∗ ⌜td_insert_go i Hole Hole t' = td_insert_go i lz' rz' t''⌝)%I.
   - unfold td_insert. iDecompose "H". unfold assemble.
     wp_type. now rewrite H2.
-  - iDestruct "H" as (? ? t' ? ? ? ? ?) "(? & Ht & ? & ? & ? & ? & ? & ? & ? & ->)".
+  - iDestruct "H" as (? ? t'' ? ? ? ? ? ?)
+      "(? & Ht & ? & ? & ? & ? & ? & ? & ? & ? & ->)".
     unfold rotate_right, rotate_left, link_right, link_left.
-    destruct t' as [|l x r].
+    destruct t'' as [|l' x r'].
     + iDecompose "Ht". wp_heap. wp_type.
     + iDestruct "Ht" as (? ? ?) "(-> & ? & Hl & Hr)". wp_heap.
-      unfold td_insert_go at 1. if_decide; wp_heap. { wp_type. }
-      { if_decide; wp_heap.
-        - destruct l; iDecompose "Hl".
-          + wp_heap. wp_type.
-          + wp_heap. if_decide; wp_heap; wp_type.
-        - destruct r; iDecompose "Hr".
-          + wp_heap. wp_type.
-          + wp_heap. if_decide; wp_heap; wp_type. }
+      unfold td_insert_go at 1.
+      if_decide; wp_heap.
+      * destruct l'; iDecompose "Hl".
+        -- wp_heap. wp_type.
+        -- if_decide; wp_heap.
+           ++ wp_heap. wp_type.
+           ++ wp_heap. if_decide; wp_heap; wp_type.
+      * if_decide; wp_heap. wp_type.
+        destruct r'; iDecompose "Hr".
+          -- wp_heap. wp_type.
+          -- wp_heap. if_decide; wp_heap; wp_type.
   - wp_type.
 Qed.
 

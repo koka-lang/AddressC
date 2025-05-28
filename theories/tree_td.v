@@ -80,8 +80,8 @@ Notation "□" := LitPoison.
 Fixpoint is_ctx (z : ctx) (p : loc) (h : loc) : iProp Σ :=
   match z with
   | Hole => ⌜h = p⌝
-  | Node0 l x r => ∃ (p' : loc) r', p ↦ #p' ∗ p' □↦∗ 0 [ #□; #x; r' ] ∗ is_ctx l (Loc.add p' 0%nat) h ∗ is_tree r r'
-  | Node2 l x r => ∃ (p' : loc) l', p ↦ #p' ∗ p' □↦∗ 2 [ l'; #x; #□ ] ∗ is_ctx r (Loc.add p' 2%nat) h ∗ is_tree l l'
+  | Node0 l x r => ∃ (p' : loc) r', p ↦ #p' ∗ p' □↦∗ 0 [ #□; #x; r' ] ∗ is_ctx l (p' +ₗ 0) h ∗ is_tree r r'
+  | Node2 l x r => ∃ (p' : loc) l', p ↦ #p' ∗ p' □↦∗ 2 [ l'; #x; #□ ] ∗ is_ctx r (p' +ₗ 2) h ∗ is_tree l l'
   end.
 
 Definition is_ctx0 (z : ctx) (p' : loc) (h : loc) : iProp Σ :=
@@ -173,6 +173,10 @@ Notation "e1 '->left'" :=
   (at level 20) : expr_scope.
 
 Notation "e1 '->key'" :=
+  (Load (BinOp OffsetOp e1%E (Val (LitV (LitInt (Z.of_nat 1))))))
+  (at level 20) : expr_scope.
+
+Notation "e1 '->item'" :=
   (Load (BinOp OffsetOp e1%E (Val (LitV (LitInt (Z.of_nat 1))))))
   (at level 20) : expr_scope.
 
